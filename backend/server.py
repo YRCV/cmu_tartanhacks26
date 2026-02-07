@@ -41,11 +41,13 @@ async def generate_firmware(request: GenerateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Generation Failed: {str(e)}")
 
-    # 2. save code & ensure function names
+
+
     if "void loop()" in code:
         code = code.replace("void loop()", "void ai_test_loop()")
     if "void setup()" in code:
         code = code.replace("void setup()", "void ai_test_setup()")
+
         
     try:
         FIRMWARE_SRC.write_text(code)
