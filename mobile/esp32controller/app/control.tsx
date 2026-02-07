@@ -3,6 +3,7 @@ import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-na
 import { useRouter } from 'expo-router';
 import { StatusBanner } from '@/src/components/ui/StatusBanner';
 import { ControlRenderer } from '@/src/components/ui/ControlRenderer';
+import { DevModeBanner } from '@/src/components/ui/DevModeBanner';
 
 // Mock schema - in a real app this would come from the backend/context
 const INITIAL_CONTROLS = [
@@ -88,6 +89,7 @@ export default function ControlPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+            <DevModeBanner />
             <ScrollView className="flex-1 px-6 py-8" showsVerticalScrollIndicator={false}>
                 <View className="mb-6">
                     <StatusBanner status={connectionStatus} />

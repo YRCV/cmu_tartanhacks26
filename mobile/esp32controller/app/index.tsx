@@ -3,6 +3,7 @@ import { View, Text, SafeAreaView, KeyboardAvoidingView, Platform, Pressable, Sc
 import { useRouter } from 'expo-router';
 import { IntentInput } from '@/src/components/ui/IntentInput';
 import { PrimaryActionButton } from '@/src/components/ui/PrimaryActionButton';
+import { DevModeBanner } from '@/src/components/ui/DevModeBanner';
 // Voice input temporarily commented out - requires native build
 // Uncomment after running: npx expo prebuild && npm run ios/android
 // import { VoiceInputButton } from '@/src/components/ui/VoiceInputButton';
@@ -54,6 +55,7 @@ export default function IntentPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+            <DevModeBanner />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
