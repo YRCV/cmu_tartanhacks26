@@ -151,7 +151,7 @@ export function useESP32Connection(espIP: string, useMock: boolean = false) {
 // Example 4: Request Cancellation
 // ============================================================================
 
-export function example4_Cancellation() {
+export function useCancellationExample() {
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const startLongRequest = async (espIP: string) => {
@@ -297,7 +297,7 @@ export async function example6_RetryLogic(
 // Example 7: Polling for Status
 // ============================================================================
 
-export function example7_Polling() {
+export function usePollingExample() {
   const [polling, setPolling] = useState(false);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 

@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { mockControls, isMockMode, getDeviceClient } from '@/src/lib/deviceClient.mock';
-import { COLORS, SPACING, RADIUS, FONT_SIZE } from '@/src/lib/version';
+
 import deviceClient from '@/src/lib/deviceClient';
 
 export default function DiagnosticsScreen() {
