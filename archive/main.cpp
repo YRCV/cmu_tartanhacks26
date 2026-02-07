@@ -1,3 +1,4 @@
+#include "user_app.h" // Include the user application header
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -6,22 +7,54 @@
 #include <WebServer.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include "ai.h"
+
 
 // wifi credentials
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PASSWORD;
 
+const int LED_PIN = 2; // the built-in led
+
 WebServer server(80);
 
-// handle root (return)
+// --- Handlers ---
+// These handlers can control the 'isUserAppActive' flag to enable/disable user
+// logic
+
+void handleLedOn() {
+  isUserAppActive = true;
+  // Reset user app state if needed (optional)
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "text/plain", "User App Active (Morse/Effects ON)");
+  Serial.println("User App ON");
+}
+
+void handleLedOff() {
+  isUserAppActive = false;
+  digitalWrite(LED_PIN, LOW); // Turn off immediately
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "text/plain", "User App Inactive (LED OFF)");
+  Serial.println("User App OFF");
+}
+
+void handleToggle() {
+  if (isUserAppActive) {
+    handleLedOff();
+  } else {
+    handleLedOn();
+  }
+}
+
 void handleRoot() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  String message = "ESP32 is running!\n";
+  String message = "ESP32 Core is running!\n";
+  message += "User App Status: ";
+  message += isUserAppActive ? "ACTIVE" : "INACTIVE";
   server.send(200, "text/plain", message);
 }
 
-// Execute OTA update from a URL
+// --- OTA Logic (Preserved) ---
+
 String executeOTAFromURL(String url) {
   HTTPClient http;
   Serial.println("Starting OTA from URL: " + url);
@@ -68,7 +101,6 @@ String executeOTAFromURL(String url) {
   return "Success";
 }
 
-// Handle OTA update request (POST /ota/update?url=...)
 void handleOTAUpdate() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
 
@@ -79,8 +111,6 @@ void handleOTAUpdate() {
 
   String url = server.arg("url");
   server.send(200, "text/plain", "Starting OTA update from " + url + "...");
-
-  // Give time for response to be sent
   delay(100);
 
   String result = executeOTAFromURL(url);
@@ -95,44 +125,27 @@ void handleOTAUpdate() {
 
 void setupOTA() {
   ArduinoOTA.setHostname("esp32-tartanhacks");
-
-  ArduinoOTA
-      .onStart([]() {
-        String type;
-        if (ArduinoOTA.getCommand() == U_FLASH)
-          type = "sketch";
-        else // U_SPIFFS
-          type = "filesystem";
-
-        Serial.println("Start updating " + type);
-      })
+  ArduinoOTA.onStart([]() { Serial.println("Start updating"); })
       .onEnd([]() { Serial.println("\nEnd"); })
       .onProgress([](unsigned int progress, unsigned int total) {
         Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
       })
-      .onError([](ota_error_t error) {
-        Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR)
-          Serial.println("Auth Failed");
-        else if (error == OTA_BEGIN_ERROR)
-          Serial.println("Begin Failed");
-        else if (error == OTA_CONNECT_ERROR)
-          Serial.println("Connect Failed");
-        else if (error == OTA_RECEIVE_ERROR)
-          Serial.println("Receive Failed");
-        else if (error == OTA_END_ERROR)
-          Serial.println("End Failed");
-      });
+      .onError([](ota_error_t error) { Serial.printf("Error[%u]: ", error); });
 
   ArduinoOTA.begin();
 }
 
+// --- Main Setup & Loop ---
+
 void setup() {
   Serial.begin(115200);
 
-  // connect to wifi
+  // Call user app setup
+  userAppSetup();
+
+  // Connect to WiFi
   Serial.println("Connecting to WiFi...");
-  WiFi.mode(WIFI_STA); // Explicitly set station mode
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -144,26 +157,24 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Setup OTA
   setupOTA();
-  
-  // Initialize AI functions
-  ai_test_setup();
 
-  // establish the http routes
   server.on("/", handleRoot);
+  server.on("/led/on", handleLedOn);
+  server.on("/led/off", handleLedOff);
+  server.on("/led/toggle", handleToggle);
   server.on("/ota/update", HTTP_POST, handleOTAUpdate);
   server.on("/ota/update", HTTP_GET, handleOTAUpdate);
-
-  // allow cors for all routes
   server.enableCORS(true);
-
   server.begin();
+
   Serial.println("HTTP server started");
 }
 
 void loop() {
   ArduinoOTA.handle();
   server.handleClient();
-  ai_test_loop();
+
+  // Delegate loop logic to user app
+  userAppLoop();
 }

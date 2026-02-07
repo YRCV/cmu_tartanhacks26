@@ -138,7 +138,7 @@ async def main():
                     .replace("void loop()", "void ai_test_loop()")
                     .replace("void setup()", "void ai_test_setup()")
                 )
-                open("ai.cpp", "w").write(code )
+                open("C:\\Users\\sanso\\projects\\hackathons\\cmu_tartanhacks26\\firmware\\src\\ai.cpp", "w").write(code )
 
             print("\n")
             history.append({"role": "assistant", "content": full_response})
