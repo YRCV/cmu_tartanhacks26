@@ -64,7 +64,7 @@ async def main():
         print(f"\n[Tool: Generator] Researching and generating for: {spec}...")
         try:
             result = await runner.run(
-                input=f"Generate firmware code for the following specification. Do not forget to include standard libaries like Arduino.h. Ensure it includes comments and error handling.\nSpec: {spec}",
+                input=f"Generate firmware code for the following specification. Do not forget to include standard libaries like Arduino.h. DONT USE STATICS OR CONST IN GLOBAL SCOPE. Ensure it includes comments and error handling.\nSpec: {spec}",
                 model="openai/gpt-5.2",
                 # mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
                 response_format=CodeResponse,
@@ -117,7 +117,7 @@ async def main():
             # Execution with orchestration using 'instructions'
             response_stream = runner.run(
                 messages=history,
-                instructions="You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. Finally, present the code and the validation result to the user.",
+                instructions="You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. Finally, present the code and the validation result to the user. Be descriptive in your feedback to user.",
                 model="openai/gpt-4o-mini",
                 tools=[firmware_generator, firmware_validator],
                 stream=True,
