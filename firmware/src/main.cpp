@@ -1,3 +1,4 @@
+#include "ai.h"
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -11,44 +12,12 @@
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PASSWORD;
 
-const int LED_PIN = 2; // the built-in led
-
 WebServer server(80);
-bool isBlinking = false;
-unsigned long previousMillis = 0;
-const long interval = 2000; // blink speed, adjust this between tests to verify uploads
-
-// handle led on
-void handleLedOn() {
-  isBlinking = true;
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", "LED Blinking Mode ON");
-  Serial.println("LED Blinking ON");
-}
-
-// handle led off
-void handleLedOff() {
-  isBlinking = false;
-  digitalWrite(LED_PIN, LOW); // Turn off immediately
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", "LED OFF");
-  Serial.println("LED turned OFF");
-}
-
-// handle led toggle
-void handleToggle() {
-  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", digitalRead(LED_PIN) ? "LED ON" : "LED OFF");
-  Serial.println("LED toggled");
-}
 
 // handle root (return)
 void handleRoot() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   String message = "ESP32 is running!\n";
-  message += "LED Status: ";
-  message += digitalRead(LED_PIN) ? "ON" : "OFF";
   server.send(200, "text/plain", message);
 }
 
@@ -99,7 +68,13 @@ String executeOTAFromURL(String url) {
   return "Success";
 }
 
-// Handle OTA update request (POST /ota/update?url=...)
+// Synchronization flags for OTA vs AI loop
+// --- sync flags ---
+volatile bool isUpdating = false; // "pause ai for update"
+volatile bool aiBusy = false;     // "ai is busy working"
+volatile bool shouldStop = false; // "stop everything now"
+
+// handle ota update request (post /ota/update?url=...)
 void handleOTAUpdate() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
 
@@ -109,11 +84,32 @@ void handleOTAUpdate() {
   }
 
   String url = server.arg("url");
-  server.send(200, "text/plain", "Starting OTA update from " + url + "...");
+  server.send(200, "text/plain", "Starting Ota update from " + url + "...");
 
-  // Give time for response to be sent
+  // 1. tell ai to stop
+  isUpdating = true;
+  shouldStop = true;
+  Serial.println("Waiting for AI loop to stop...");
+
+  // 2. wait for ai to finish current step
+  // wait up to 10s, otherwise force it
+  unsigned long startWait = millis();
+  while (aiBusy && (millis() - startWait < 10000)) {
+    delay(10);
+  }
+
+  // 3. check if stopped
+  if (aiBusy) {
+    Serial.println(
+        "Warning: AI loop did not stop in time. Proceeding anyway...");
+  } else {
+    Serial.println("AI loop stopped. Proceeding with OTA...");
+  }
+
+  // give time for web response
   delay(100);
 
+  // 4. run update
   String result = executeOTAFromURL(url);
 
   if (result == "Success") {
@@ -121,16 +117,34 @@ void handleOTAUpdate() {
     ESP.restart();
   } else {
     Serial.println("OTA Failed: " + result);
+    // resume ai loop if OTA failed
+    isUpdating = false;
+    shouldStop = false;
   }
+}
+
+// ... existing setupOTA/webServerTask/setup ...
+
+void loop() {
+  // Check if OTA is requested relative to core synchronization
+  if (isUpdating) {
+    delay(100);
+    return;
+  }
+
+  // Mark AI as busy
+  aiBusy = true;
+
+  // Since server.handleClient() is now in a task, ai_test_loop()
+  // can block here without affecting the web server.
+  ai_test_loop();
+
+  // Mark AI as not busy
+  aiBusy = false;
 }
 
 void setupOTA() {
   ArduinoOTA.setHostname("esp32-tartanhacks");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("password");
-
-  // Password can be set with it's md5 value as well
 
   ArduinoOTA
       .onStart([]() {
@@ -140,8 +154,6 @@ void setupOTA() {
         else // U_SPIFFS
           type = "filesystem";
 
-        // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
-        // using SPIFFS.end()
         Serial.println("Start updating " + type);
       })
       .onEnd([]() { Serial.println("\nEnd"); })
@@ -165,10 +177,37 @@ void setupOTA() {
   ArduinoOTA.begin();
 }
 
+// Task for handling web server and OTA updates independently
+void webServerTask(void *pvParameters) {
+  for (;;) {
+    server.handleClient();
+    ArduinoOTA.handle();
+    // Yield to let other tasks run and feed the watchdog
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+}
+
+// Handle variable changes dynamically via query params
+void handleChangeVar() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  String response = "Update status:\n";
+  
+  for (int i = 0; i < server.args(); i++) {
+    String name = server.argName(i);
+    String value = server.arg(i);
+    
+    if (updateVariableGeneric(name, value)) {
+      response += " - " + name + " updated successfully\n";
+    } else {
+      response += " - " + name + " FAILED (not found or type mismatch)\n";
+    }
+  }
+
+  server.send(200, "text/plain", response);
+}
+
 void setup() {
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
 
   // connect to wifi
   Serial.println("Connecting to WiFi...");
@@ -187,32 +226,29 @@ void setup() {
   // Setup OTA
   setupOTA();
 
+  // Initialize AI functions
+  ai_test_setup();
+
   // establish the http routes
   server.on("/", handleRoot);
-  server.on("/led/on", handleLedOn);
-  server.on("/led/off", handleLedOff);
-
-  server.on("/led/toggle", handleToggle);
   server.on("/ota/update", HTTP_POST, handleOTAUpdate);
-  server.on("/ota/update", HTTP_GET,
-            handleOTAUpdate); // Allow GET for easier browser testing if needed
+  server.on("/ota/update", HTTP_GET, handleOTAUpdate);
+  server.on("/changeVar", HTTP_GET, handleChangeVar);
 
   // allow cors for all routes
   server.enableCORS(true);
 
   server.begin();
-  Serial.println("HTTP server started");
-}
+  Serial.println("HTTP server started"); 
 
-void loop() {
-  ArduinoOTA.handle();
-  server.handleClient();
-
-  if (isBlinking) {
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-      previousMillis = currentMillis;
-      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-    }
-  }
+  // Create the web server task running on Core 0
+  // loop() runs on Core 1 by default
+  xTaskCreatePinnedToCore(webServerTask,   // Task function
+                          "WebServerTask", // Task name
+                          4096,            // Stack size (bytes)
+                          NULL,            // Parameters
+                          1,               // Priority
+                          NULL,            // Task handle
+                          0                // Core 0
+  );
 }
