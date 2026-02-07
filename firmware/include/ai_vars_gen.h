@@ -4,26 +4,16 @@
 #include <Arduino.h>
 
 // Externs
-extern int kLedPin;
-extern uint32_t kFastOnMs;
-extern uint32_t kFastOffMs;
-extern uint32_t kHoldMs;
+extern int servoPin;
+extern int ledPin;
 
 inline bool updateVariableGeneric(String name, String value) {
-  if (name == "kLedPin") {
-    kLedPin = (int)value.toInt();
+  if (name == "servoPin") {
+    servoPin = (int)value.toInt();
     return true;
   }
-  if (name == "kFastOnMs") {
-    kFastOnMs = (uint32_t)value.toInt();
-    return true;
-  }
-  if (name == "kFastOffMs") {
-    kFastOffMs = (uint32_t)value.toInt();
-    return true;
-  }
-  if (name == "kHoldMs") {
-    kHoldMs = (uint32_t)value.toInt();
+  if (name == "ledPin") {
+    ledPin = (int)value.toInt();
     return true;
   }
   return false;

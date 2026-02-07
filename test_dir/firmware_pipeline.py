@@ -70,7 +70,8 @@ async def main():
                 # mcp_servers=["kuax/dedalus_server"],
                 response_format=CodeResponse,
             )
-            print(f"[Tool: Generator] Code generated: {result.final_output}...")
+            print(f"[Tool: Generator] Code generated: {json.loads(result.final_output)}...")
+            print(json.loads(result.final_output)['code'])
             return result.final_output
         except Exception as e:
             print(f"\n[Tool: Generator] ERROR: {e}")

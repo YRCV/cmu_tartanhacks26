@@ -134,6 +134,7 @@ void handleChangeVar() {
     }
   }
 
+  ai_test_setup();
   server.send(200, "text/plain", response);
 }
 
