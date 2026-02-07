@@ -1,0 +1,15 @@
+# general
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
+
+# dependencies (just in case of accidents)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# expo (just in case of accidents)
+.expo/
+dist/
+web-build/
