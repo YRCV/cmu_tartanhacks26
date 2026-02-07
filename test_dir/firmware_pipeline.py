@@ -65,7 +65,7 @@ async def main():
         try:
             result = await runner.run(
                 input=f"Generate firmware code for the following specification. Ensure it includes comments and error handling.\nSpec: {spec}",
-                model="xai/grok-code-fast-1",
+                model="openai/gpt-5.2",
                 # mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
                 response_format=CodeResponse,
             )
