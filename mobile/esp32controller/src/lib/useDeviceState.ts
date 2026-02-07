@@ -23,8 +23,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { deviceClient } from './deviceClient';
-import type { DeviceResult } from './deviceClient';
+import deviceClient from './deviceClient';
+import type { DeviceResponse } from './deviceClient';
 import {
   type DeviceScreenState,
   type DeviceCommand,
@@ -117,12 +117,12 @@ export function useDeviceState(
 
   // ─── Generic Command Sender ──────────────────────────────
   const sendCommand = useCallback(
-    async <T,>(
+    async (
       command: DeviceCommand,
       executeRequest: (
         signal: AbortSignal
-      ) => Promise<DeviceResult<T>>,
-      extractResponse: (data: T) => string
+      ) => Promise<DeviceResponse>,
+      extractResponse: (rawText: string) => string
     ): Promise<void> => {
       // Generate unique request ID
       const requestId = generateRequestId();
@@ -151,7 +151,7 @@ export function useDeviceState(
         if (!controller.signal.aborted) {
           setState((prev) => {
             if (result.ok) {
-              const responseText = extractResponse(result.data);
+              const responseText = extractResponse(result.rawText);
               const newState = createSuccessState(
                 prev,
                 requestId,
@@ -213,7 +213,7 @@ export function useDeviceState(
     await sendCommand(
       'status',
       (signal) => deviceClient.getStatus(state.deviceIp, { signal }),
-      (data) => JSON.stringify(data)
+      (rawText) => rawText
     );
   }, [state.deviceIp, sendCommand]);
 
@@ -221,7 +221,7 @@ export function useDeviceState(
     await sendCommand(
       'toggle',
       (signal) => deviceClient.led(state.deviceIp, 'toggle', { signal }),
-      (data) => data.led
+      (rawText) => deviceClient.parseLedState(rawText)
     );
   }, [state.deviceIp, sendCommand]);
 
@@ -229,7 +229,7 @@ export function useDeviceState(
     await sendCommand(
       'on',
       (signal) => deviceClient.led(state.deviceIp, 'on', { signal }),
-      (data) => data.led
+      (rawText) => deviceClient.parseLedState(rawText)
     );
   }, [state.deviceIp, sendCommand]);
 
@@ -237,7 +237,7 @@ export function useDeviceState(
     await sendCommand(
       'off',
       (signal) => deviceClient.led(state.deviceIp, 'off', { signal }),
-      (data) => data.led
+      (rawText) => deviceClient.parseLedState(rawText)
     );
   }, [state.deviceIp, sendCommand]);
 
@@ -247,7 +247,7 @@ export function useDeviceState(
         'ota',
         (signal) =>
           deviceClient.otaUpdate(state.deviceIp, firmwareUrl, { signal }),
-        (data) => data.message || 'OTA update started'
+        (rawText) => rawText || 'OTA update started'
       );
     },
     [state.deviceIp, sendCommand]
@@ -352,41 +352,4 @@ export function useDeviceState(
  * ```
  */
 
-/**
- * Example: Command log item component
- */
-export function CommandLogItem({ entry }: { entry: CommandLogEntry }) {
-  const statusIcons = {
-    pending: '⏳',
-    success: '✅',
-    error: '❌',
-  };
 
-  const formatTime = (date: Date) => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-  };
-
-  return (
-    <div style={{ padding: 8, borderBottom: '1px solid #ccc' }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span>{statusIcons[entry.status]}</span>
-        <span>{formatTime(entry.timestamp)}</span>
-        <span>{entry.command}</span>
-        {entry.latencyMs && <span>{entry.latencyMs}ms</span>}
-      </div>
-      {entry.errorMessage && (
-        <div style={{ color: 'red', fontSize: 12 }}>
-          {entry.errorMessage}
-        </div>
-      )}
-      {entry.responseText && (
-        <div style={{ color: 'green', fontSize: 12 }}>
-          {entry.responseText}
-        </div>
-      )}
-    </div>
-  );
-}
