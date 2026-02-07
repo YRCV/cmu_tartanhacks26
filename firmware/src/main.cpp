@@ -1,10 +1,11 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
+#include <HTTPClient.h>
+#include <Update.h>
 #include <WebServer.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-
 
 // wifi credentials
 const char *ssid = WIFI_SSID;
@@ -13,18 +14,22 @@ const char *password = WIFI_PASSWORD;
 const int LED_PIN = 2; // the built-in led
 
 WebServer server(80);
+bool isBlinking = false;
+unsigned long previousMillis = 0;
+const long interval = 2000; // blink speed, adjust this between tests to verify uploads
 
 // handle led on
 void handleLedOn() {
-  digitalWrite(LED_PIN, HIGH);
+  isBlinking = true;
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", "LED ON");
-  Serial.println("LED turned ON");
+  server.send(200, "text/plain", "LED Blinking Mode ON");
+  Serial.println("LED Blinking ON");
 }
 
 // handle led off
 void handleLedOff() {
-  digitalWrite(LED_PIN, LOW);
+  isBlinking = false;
+  digitalWrite(LED_PIN, LOW); // Turn off immediately
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/plain", "LED OFF");
   Serial.println("LED turned OFF");
@@ -47,6 +52,78 @@ void handleRoot() {
   server.send(200, "text/plain", message);
 }
 
+// Execute OTA update from a URL
+String executeOTAFromURL(String url) {
+  HTTPClient http;
+  Serial.println("Starting OTA from URL: " + url);
+
+  http.begin(url);
+  int httpCode = http.GET();
+
+  if (httpCode != HTTP_CODE_OK) {
+    http.end();
+    return "Error: HTTP GET failed, code " + String(httpCode);
+  }
+
+  int contentLength = http.getSize();
+  if (contentLength <= 0) {
+    http.end();
+    return "Error: Content-Length is invalid";
+  }
+
+  bool canBegin = Update.begin(contentLength);
+  if (!canBegin) {
+    http.end();
+    return "Error: Not enough space for OTA";
+  }
+
+  WiFiClient *stream = http.getStreamPtr();
+  size_t written = Update.writeStream(*stream);
+
+  if (written != contentLength) {
+    http.end();
+    return "Error: Written " + String(written) + " / " + String(contentLength);
+  }
+
+  if (!Update.end()) {
+    http.end();
+    return "Error: Update.end() failed. Error #: " + String(Update.getError());
+  }
+
+  if (!Update.isFinished()) {
+    http.end();
+    return "Error: Update not finished via isFinished()";
+  }
+
+  http.end();
+  return "Success";
+}
+
+// Handle OTA update request (POST /ota/update?url=...)
+void handleOTAUpdate() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+
+  if (!server.hasArg("url")) {
+    server.send(400, "text/plain", "Missing 'url' parameter");
+    return;
+  }
+
+  String url = server.arg("url");
+  server.send(200, "text/plain", "Starting OTA update from " + url + "...");
+
+  // Give time for response to be sent
+  delay(100);
+
+  String result = executeOTAFromURL(url);
+
+  if (result == "Success") {
+    Serial.println("OTA Success! Rebooting...");
+    ESP.restart();
+  } else {
+    Serial.println("OTA Failed: " + result);
+  }
+}
+
 void setupOTA() {
   ArduinoOTA.setHostname("esp32-tartanhacks");
 
@@ -54,7 +131,6 @@ void setupOTA() {
   // ArduinoOTA.setPassword("password");
 
   // Password can be set with it's md5 value as well
-
 
   ArduinoOTA
       .onStart([]() {
@@ -115,7 +191,11 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/led/on", handleLedOn);
   server.on("/led/off", handleLedOff);
+
   server.on("/led/toggle", handleToggle);
+  server.on("/ota/update", HTTP_POST, handleOTAUpdate);
+  server.on("/ota/update", HTTP_GET,
+            handleOTAUpdate); // Allow GET for easier browser testing if needed
 
   // allow cors for all routes
   server.enableCORS(true);
@@ -127,4 +207,12 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
   server.handleClient();
+
+  if (isBlinking) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+    }
+  }
 }
