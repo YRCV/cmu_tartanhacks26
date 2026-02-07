@@ -117,7 +117,7 @@ async def main():
             # Execution with orchestration using 'instructions'
             response_stream = runner.run(
                 messages=history,
-                instructions="You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. Finally, present the code and the validation result to the user. Be descriptive in your feedback to user.",
+                instructions="You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. IMPORTANT: The generated code MUST check the global flag `shouldStop` (extern volatile bool shouldStop) periodically in loops and long delays. If `shouldStop` is true, the function must return immediately. Finally, present the code and the validation result to the user. Be descriptive in your feedback to user.",
                 model="openai/gpt-4o-mini",
                 tools=[firmware_generator, firmware_validator],
                 stream=True,
