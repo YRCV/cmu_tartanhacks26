@@ -47,6 +47,21 @@ To run the provided examples, you can use the following command from the root di
 python examples/simple_usage.py
 ```
 
+### Firmware Generator (Structured Outputs)
+
+This example demonstrates generating structured JSON output (Pydantic models) from natural language.
+
+1. **Terminal 1 (Start Server):**
+
+    ```bash
+    python examples/firmware_generator_server.py
+    ```
+
+2. **Terminal 2 (Run Client):**
+    ```bash
+    python examples/test_structured_output.py
+    ```
+
 ## Structure
 
 - `src/dedalus/complexity.py`: Logic for analyzing prompt complexity.
