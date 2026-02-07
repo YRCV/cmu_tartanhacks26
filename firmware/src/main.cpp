@@ -169,7 +169,7 @@ void setup() {
   server.enableCORS(true);
 
   server.begin();
-  Serial.println("HTTP server started");
+  Serial.println("HTTP server started"); 
 
   // Create the web server task running on Core 0
   // loop() runs on Core 1 by default
