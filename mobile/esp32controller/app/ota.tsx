@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import deviceClient from '@/src/lib/deviceClient';
+import { otaUpdate } from '@/src/lib/deviceClient';
 import { COLORS, SPACING, RADIUS, FONT_SIZE } from '@/src/lib/version';
 
 export default function OtaScreen() {
@@ -61,7 +61,7 @@ export default function OtaScreen() {
     setProgress('Initiating OTA update...');
 
     try {
-      const result = await deviceClient.otaUpdate(deviceIp, firmwareUrl, {
+      const result = await otaUpdate(deviceIp, firmwareUrl, {
         timeoutMs: 30000, // 30 second timeout
       });
 

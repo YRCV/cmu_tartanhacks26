@@ -92,7 +92,7 @@ invalidURLs.forEach(url => {
 
 console.log('\n=== LED State Parsing Tests ===');
 
-const stateTests: Array<[string, 'on' | 'off' | 'unknown']> = [
+const stateTests: [string, 'on' | 'off' | 'unknown'][] = [
   ['LED is now ON', 'on'],
   ['LED is now OFF', 'off'],
   ['LED toggled to ON', 'on'],
@@ -116,7 +116,7 @@ stateTests.forEach(([input, expected]) => {
 
 console.log('\n=== Error Message Tests ===');
 
-const errorTypes: Array<DeviceError['errorType']> = [
+const errorTypes: DeviceError['errorType'][] = [
   'timeout',
   'network',
   'http',

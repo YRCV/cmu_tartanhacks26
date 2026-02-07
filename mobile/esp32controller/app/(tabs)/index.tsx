@@ -1,50 +1,41 @@
 /**
- * Controller Screen - Latency-First LED Controller
+ * Controller Screen - Modern iOS Dark Mode
  *
- * Main screen for controlling ESP32 device with emphasis on
- * network latency visibility and tactile controls.
+ * Implements a high-fidelity, dark-themed UI with neumorphic touches
+ * and glassmorphism, matching the "Modern iOS" aesthetic.
  */
 
 import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  TextInput,
   Modal,
+  TextInput,
+  TouchableOpacity,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { useDeviceState } from '@/src/lib/useDeviceState';
-import { TopBar } from '@/components/controller/TopBar';
-import { ConnectionCard } from '@/components/controller/ConnectionCard';
-import { ControlButtons } from '@/components/controller/ControlButtons';
-import { LedStatusDisplay } from '@/components/controller/LedStatusDisplay';
-import { ResponsePanel } from '@/components/controller/ResponsePanel';
-import {
-  getVersionInfo,
-  getVersionFooter,
-  COLORS,
-  SPACING,
-  RADIUS,
-  FONT_SIZE,
-} from '@/src/lib/version';
+import { cn } from '@/src/lib/utils';
+import { GlassCard } from '@/src/components/ui/GlassCard';
+import { NeumorphicButton } from '@/src/components/ui/NeumorphicButton';
+import { CollapsibleConsole } from '@/src/components/ui/CollapsibleConsole';
+import { GlassAlert } from '@/src/components/ui/GlassAlert';
 import { useRouter } from 'expo-router';
+import { Power, Zap, Activity } from 'lucide-react-native';
 
 export default function ControllerScreen() {
   // ─── State ───────────────────────────────────────────────
   const device = useDeviceState('192.168.1.100');
   const router = useRouter();
-  const versionInfo = getVersionInfo();
 
-  const [deviceName, setDeviceName] = useState('ESP32 Device');
+  const [deviceName] = useState('Living Room');
   const [showIpModal, setShowIpModal] = useState(false);
-  const [showNameModal, setShowNameModal] = useState(false);
-  const [showVersionModal, setShowVersionModal] = useState(false);
-
   const [ipInput, setIpInput] = useState(device.state.deviceIp);
-  const [nameInput, setNameInput] = useState(deviceName);
+
+  // Derive gauge value from LED state (0 = Off, 100 = On)
+  const isLedOn = device.state.lastResponseText?.toLowerCase().includes('on') || false;
 
   // ─── Handlers ────────────────────────────────────────────
 
@@ -52,19 +43,7 @@ export default function ControllerScreen() {
     if (ipInput) {
       device.setDeviceIp(ipInput);
       setShowIpModal(false);
-      Alert.alert('Success', `Device IP set to ${ipInput}`);
     }
-  };
-
-  const handleSaveName = () => {
-    if (nameInput) {
-      setDeviceName(nameInput);
-      setShowNameModal(false);
-    }
-  };
-
-  const handleRefreshStatus = () => {
-    device.getStatus();
   };
 
   const handleOtaPress = () => {
@@ -78,367 +57,188 @@ export default function ControllerScreen() {
     });
   };
 
-  // Derive LED state from last response
-  const ledState = deriveLedState(device.state.lastResponseText);
-
   // ─── Render ──────────────────────────────────────────────
 
   return (
-    <View style={styles.container}>
-      {/* Top Bar */}
-      <TopBar
-        deviceName={deviceName}
-        deviceIp={device.state.deviceIp}
-        onEditName={() => setShowNameModal(true)}
-        onEditIp={() => setShowIpModal(true)}
-      />
+    <View className="flex-1 bg-background">
+      <StatusBar barStyle="light-content" />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-      >
-        {/* Connection Card */}
-        <ConnectionCard
-          status={device.state.connection}
-          lastSeen={device.state.lastUpdatedAt || undefined}
-          latencyMs={device.state.lastLatencyMs || undefined}
-          onPress={handleRefreshStatus}
-          isRefreshing={device.state.busyCommand === 'status'}
-        />
+      {/* Header (Glass, Name, IP) */}
+      <View className="flex-row justify-between items-center px-6 pt-16 pb-4">
+        <View>
+          <Text className="text-neutral-500 text-xs font-semibold tracking-widest uppercase mb-1">
+            CONTROLLER
+          </Text>
+          <Text className="text-white text-xl font-bold tracking-tight">
+            {deviceName}
+          </Text>
+        </View>
 
-        {/* Primary Control Buttons */}
-        <ControlButtons
-          onToggle={device.toggleLed}
-          onTurnOn={device.turnLedOn}
-          onTurnOff={device.turnLedOff}
-          disabled={!device.state.deviceIp || device.isBusy}
-          busyButton={
-            ['toggle', 'on', 'off'].includes(device.state.busyCommand as any)
-              ? (device.state.busyCommand as any)
-              : undefined
-          }
-        />
+        <TouchableOpacity
+          onPress={() => setShowIpModal(true)}
+          className="bg-surface-highlight px-3 py-1.5 rounded-full flex-row items-center gap-2 border border-white/5"
+        >
+          <View className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+          <Text className="text-neutral-300 text-xs font-mono">{device.state.deviceIp || "No IP"}</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* LED Status Display */}
-        {device.state.lastResponseText && (
-          <LedStatusDisplay ledState={ledState} />
-        )}
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} className="px-6">
 
-        {/* Error Banner */}
+        {/* Error Alert */}
         {device.state.error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{device.state.error}</Text>
-            <TouchableOpacity onPress={device.clearError}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </TouchableOpacity>
+          <View className="mb-4">
+            <GlassAlert
+              title="Connection Error"
+              message={device.state.error}
+              onDismiss={device.clearError}
+            />
           </View>
         )}
 
-        {/* Response Panel */}
-        <ResponsePanel responseText={device.state.lastResponseText} />
+        {/* Instrument Cluster (Status, Latency, Timestamp) */}
+        <GlassCard className="mb-6 p-0 overflow-hidden">
+          <View className="flex-row divide-x divide-white/5">
+            <View className="flex-1 p-4 items-center">
+              <Text className="text-neutral-500 text-[10px] uppercase font-bold tracking-wider mb-1">STATUS</Text>
+              <Text className={cn("text-base font-semibold", device.isOnline ? "text-green-500" : "text-red-500")}>
+                {device.isOnline ? "ONLINE" : "OFFLINE"}
+              </Text>
+            </View>
+            <View className="flex-1 p-4 items-center">
+              <Text className="text-neutral-500 text-[10px] uppercase font-bold tracking-wider mb-1">LATENCY</Text>
+              <Text className="text-white text-base font-semibold font-mono">
+                {device.state.lastLatencyMs ? `${device.state.lastLatencyMs}ms` : '--'}
+              </Text>
+            </View>
+            <View className="flex-1 p-4 items-center">
+              <Text className="text-neutral-500 text-[10px] uppercase font-bold tracking-wider mb-1">LAST SEEN</Text>
+              <Text className="text-neutral-300 text-base font-semibold">
+                {device.state.lastUpdatedAt ? new Date(device.state.lastUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              </Text>
+            </View>
+          </View>
+        </GlassCard>
 
-        {/* OTA Button */}
-        <TouchableOpacity
-          style={[
-            styles.otaButton,
-            device.isOffline && styles.otaButtonDisabled,
-          ]}
-          onPress={handleOtaPress}
-          disabled={device.isOffline}
-        >
-          <Text style={styles.otaButtonText}>OTA Update →</Text>
-        </TouchableOpacity>
+        {/* Primary Controls (Row of 3) */}
+        <View className="flex-row gap-4 mb-8 h-32">
+          {/* Toggle (Blue) */}
+          <NeumorphicButton
+            className="flex-1 h-full bg-primary/10 border-primary/30"
+            onPress={device.toggleLed}
+            disabled={device.isBusy}
+            active={isLedOn} // Using active check for styling if needed, or visual feedback
+          >
+            <View className="items-center gap-2">
+              <Power size={32} color="#0a84ff" />
+              <Text className="text-primary font-bold">TOGGLE</Text>
+            </View>
+          </NeumorphicButton>
 
-        {/* Version Footer */}
-        <TouchableOpacity
-          onPress={() => setShowVersionModal(true)}
-          style={styles.versionFooter}
-        >
-          <Text style={styles.versionText}>
-            {getVersionFooter(versionInfo)}
-          </Text>
-        </TouchableOpacity>
+          {/* On (Green) */}
+          <NeumorphicButton
+            className="flex-1 h-full bg-green-500/10 border-green-500/30"
+            onPress={device.turnLedOn}
+            disabled={device.isBusy}
+          >
+            <View className="items-center gap-2">
+              <View className="w-8 h-8 rounded-full border-4 border-green-500" />
+              <Text className="text-green-500 font-bold">ON</Text>
+            </View>
+          </NeumorphicButton>
+
+          {/* Off (Red) */}
+          <NeumorphicButton
+            className="flex-1 h-full bg-red-500/10 border-red-500/30"
+            onPress={device.turnLedOff}
+            disabled={device.isBusy}
+          >
+            <View className="items-center gap-2">
+              <View className="w-8 h-8 rounded-full border-4 border-red-500 opacity-30" />
+              <Text className="text-red-500 font-bold">OFF</Text>
+            </View>
+          </NeumorphicButton>
+        </View>
+
+        {/* Secondary Actions (OTA, etc) - Reusing Glass Layout */}
+        <GlassCard className="mb-6">
+          <View className="flex-row justify-between items-center mb-4 border-b border-white/5 pb-2">
+            <Text className="text-neutral-400 text-xs font-bold uppercase tracking-widest">SYSTEM ACTIONS</Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleOtaPress}
+            className="flex-row items-center justify-between py-3"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 h-8 rounded-full bg-warning/10 items-center justify-center">
+                <Zap size={16} color="#f59e0b" />
+              </View>
+              <View>
+                <Text className="text-neutral-200 font-medium">Firmware Update</Text>
+                <Text className="text-neutral-500 text-xs">OTA Flash</Text>
+              </View>
+            </View>
+            <Text className="text-neutral-600 text-lg">›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/diagnostics')} // Assuming diagnostics route exists or reused
+            className="flex-row items-center justify-between py-3 border-t border-white/5"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 h-8 rounded-full bg-blue-500/10 items-center justify-center">
+                <Activity size={16} color="#0a84ff" />
+              </View>
+              <View>
+                <Text className="text-neutral-200 font-medium">Diagnostics</Text>
+                <Text className="text-neutral-500 text-xs">Network Stats</Text>
+              </View>
+            </View>
+            <Text className="text-neutral-600 text-lg">›</Text>
+          </TouchableOpacity>
+        </GlassCard>
+
+        {/* Debug Console */}
+        <CollapsibleConsole
+          logs={device.state.lastResponseText || "No response data available."}
+          className="mb-8"
+        />
+
       </ScrollView>
 
       {/* IP Edit Modal */}
-      <Modal
-        visible={showIpModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowIpModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Device IP</Text>
+      <Modal visible={showIpModal} transparent animationType="fade">
+        <View className="flex-1 bg-black/80 items-center justify-center p-6">
+          <GlassCard className="w-full max-w-sm">
+            <Text className="text-white text-xl font-bold mb-4">Device IP</Text>
             <TextInput
-              style={styles.modalInput}
+              className="bg-surface-highlight text-white p-4 rounded-xl mb-4 text-lg font-mono"
               value={ipInput}
               onChangeText={setIpInput}
-              placeholder="192.168.1.100"
-              keyboardType="numbers-and-punctuation"
-              autoCapitalize="none"
-              autoCorrect={false}
+              placeholderTextColor="#525252"
               autoFocus
             />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+            <View className="flex-row gap-4">
+              <NeumorphicButton
+                className="flex-1"
+                variant="secondary"
                 onPress={() => setShowIpModal(false)}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSave]}
+                Cancel
+              </NeumorphicButton>
+              <NeumorphicButton
+                className="flex-1"
                 onPress={handleSaveIp}
               >
-                <Text style={[styles.modalButtonText, { color: '#fff' }]}>
-                  Save
-                </Text>
-              </TouchableOpacity>
+                Save
+              </NeumorphicButton>
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Name Edit Modal */}
-      <Modal
-        visible={showNameModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNameModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Device Name</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={nameInput}
-              onChangeText={setNameInput}
-              placeholder="ESP32 Device"
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setShowNameModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSave]}
-                onPress={handleSaveName}
-              >
-                <Text style={[styles.modalButtonText, { color: '#fff' }]}>
-                  Save
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Version Info Modal */}
-      <Modal
-        visible={showVersionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowVersionModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>App Version</Text>
-            <View style={styles.versionDetails}>
-              <VersionRow label="Version" value={versionInfo.appVersion} />
-              <VersionRow label="Build" value={versionInfo.buildNumber} />
-              <VersionRow label="Platform" value={versionInfo.platform} />
-              <VersionRow label="OS" value={versionInfo.osVersion} />
-              {versionInfo.deviceModel && (
-                <VersionRow label="Device" value={versionInfo.deviceModel} />
-              )}
-              {versionInfo.gitHash && (
-                <VersionRow
-                  label="Git Hash"
-                  value={versionInfo.gitHash.substring(0, 7)}
-                />
-              )}
-              {versionInfo.gitBranch && (
-                <VersionRow label="Branch" value={versionInfo.gitBranch} />
-              )}
-            </View>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonSave]}
-              onPress={() => setShowVersionModal(false)}
-            >
-              <Text style={[styles.modalButtonText, { color: '#fff' }]}>
-                Close
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
     </View>
   );
 }
 
-/**
- * Version detail row
- */
-function VersionRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.versionRow}>
-      <Text style={styles.versionLabel}>{label}:</Text>
-      <Text style={styles.versionValue}>{value}</Text>
-    </View>
-  );
-}
 
-/**
- * Derive LED state from response text
- */
-function deriveLedState(
-  responseText: string
-): 'on' | 'off' | 'unknown' {
-  if (!responseText) return 'unknown';
-
-  const lower = responseText.toLowerCase();
-
-  if (lower.includes('"led":"on"') || lower.includes('led is on')) {
-    return 'on';
-  } else if (lower.includes('"led":"off"') || lower.includes('led is off')) {
-    return 'off';
-  }
-
-  return 'unknown';
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: SPACING.md,
-  },
-  errorBanner: {
-    backgroundColor: '#fef2f2',
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.danger,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  errorText: {
-    flex: 1,
-    fontSize: FONT_SIZE.sm,
-    color: '#991b1b',
-  },
-  dismissText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.danger,
-    fontWeight: '600',
-  },
-  otaButton: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 2,
-    borderColor: COLORS.warning,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  otaButtonDisabled: {
-    borderColor: COLORS.border,
-    opacity: 0.5,
-  },
-  otaButtonText: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: '600',
-    color: COLORS.warning,
-  },
-  versionFooter: {
-    padding: SPACING.md,
-    alignItems: 'center',
-  },
-  versionText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.text.disabled,
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    width: '80%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
-    marginBottom: SPACING.md,
-    color: COLORS.text.primary,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    fontSize: FONT_SIZE.base,
-    marginBottom: SPACING.md,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  modalButton: {
-    flex: 1,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalButtonSave: {
-    backgroundColor: COLORS.primary,
-  },
-  modalButtonText: {
-    fontSize: FONT_SIZE.base,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-  },
-  versionDetails: {
-    marginBottom: SPACING.md,
-  },
-  versionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: SPACING.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  versionLabel: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-  },
-  versionValue: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text.primary,
-    fontFamily: 'monospace',
-  },
-});

@@ -23,12 +23,18 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import deviceClient from './deviceClient';
-import type { DeviceResponse } from './deviceClient';
 import {
-  type DeviceScreenState,
-  type DeviceCommand,
-  type CommandLogEntry,
+  getStatus as getDeviceStatus,
+  led,
+  otaUpdate,
+  parseLedState,
+  type DeviceResponse,
+} from './deviceClient';
+import type {
+  DeviceScreenState,
+  DeviceCommand,
+} from './deviceScreenState';
+import {
   initialDeviceScreenState,
   generateRequestId,
   createSendingState,
@@ -212,7 +218,7 @@ export function useDeviceState(
   const getStatus = useCallback(async () => {
     await sendCommand(
       'status',
-      (signal) => deviceClient.getStatus(state.deviceIp, { signal }),
+      (signal) => getDeviceStatus(state.deviceIp, { signal }),
       (rawText) => rawText
     );
   }, [state.deviceIp, sendCommand]);
@@ -220,24 +226,24 @@ export function useDeviceState(
   const toggleLed = useCallback(async () => {
     await sendCommand(
       'toggle',
-      (signal) => deviceClient.led(state.deviceIp, 'toggle', { signal }),
-      (rawText) => deviceClient.parseLedState(rawText)
+      (signal) => led(state.deviceIp, 'toggle', { signal }),
+      (rawText) => parseLedState(rawText)
     );
   }, [state.deviceIp, sendCommand]);
 
   const turnLedOn = useCallback(async () => {
     await sendCommand(
       'on',
-      (signal) => deviceClient.led(state.deviceIp, 'on', { signal }),
-      (rawText) => deviceClient.parseLedState(rawText)
+      (signal) => led(state.deviceIp, 'on', { signal }),
+      (rawText) => parseLedState(rawText)
     );
   }, [state.deviceIp, sendCommand]);
 
   const turnLedOff = useCallback(async () => {
     await sendCommand(
       'off',
-      (signal) => deviceClient.led(state.deviceIp, 'off', { signal }),
-      (rawText) => deviceClient.parseLedState(rawText)
+      (signal) => led(state.deviceIp, 'off', { signal }),
+      (rawText) => parseLedState(rawText)
     );
   }, [state.deviceIp, sendCommand]);
 
@@ -246,7 +252,7 @@ export function useDeviceState(
       await sendCommand(
         'ota',
         (signal) =>
-          deviceClient.otaUpdate(state.deviceIp, firmwareUrl, { signal }),
+          otaUpdate(state.deviceIp, firmwareUrl, { signal }),
         (rawText) => rawText || 'OTA update started'
       );
     },
@@ -351,5 +357,3 @@ export function useDeviceState(
  * }
  * ```
  */
-
-

@@ -5,7 +5,13 @@
  * with race condition prevention and state management.
  *
  * This is a reference implementation you can copy/adapt.
+ *
+ * NOTE: This is an example file for reference only.
+ * The actual controller screen is at app/(tabs)/controller.tsx
  */
+
+ 
+// @ts-nocheck
 
 import React, { useState } from 'react';
 import {
@@ -304,11 +310,7 @@ function CommandLogItem({ entry }: { entry: CommandLogEntry }) {
     error: '❌',
   };
 
-  const statusColors = {
-    pending: '#f59e0b',
-    success: '#10b981',
-    error: '#ef4444',
-  };
+
 
   return (
     <View style={styles.logEntry}>

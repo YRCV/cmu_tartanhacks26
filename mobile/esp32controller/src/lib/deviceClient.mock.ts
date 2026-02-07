@@ -249,5 +249,6 @@ export function getDeviceClient() {
     console.log('[DeviceClient] Using MOCK client');
     return mockDeviceClient;
   }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require('./deviceClient').deviceClient;
 }

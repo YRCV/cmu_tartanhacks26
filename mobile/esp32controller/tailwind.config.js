@@ -5,49 +5,39 @@ module.exports = {
     "./components/**/*.{js,jsx,ts,tsx}",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  presets: [require("nativewind/preset")],
 
   theme: {
     extend: {
       colors: {
         // Backgrounds
-        background: '#0a0a0a',
-        surface: '#1a1a1a',
-        'surface-hover': '#252525',
+        background: '#000000', // Deepest black for OLED
+        surface: '#1c1c1e',    // Apple system gray 6 dark
+        'surface-highlight': '#2c2c2e', // Apple system gray 5 dark
 
-        // Borders
-        border: '#2a2a2a',
-        'border-hover': '#3a3a3a',
-
-        // Brand
+        // Brand / Accents (Neon-like)
         primary: {
-          DEFAULT: '#3b82f6',
-          hover: '#2563eb',
+          DEFAULT: '#0a84ff', // iOS System Blue
+          glow: 'rgba(10, 132, 255, 0.5)',
         },
         success: {
-          DEFAULT: '#10b981',
-          hover: '#059669',
+          DEFAULT: '#30d158', // iOS System Green
+          glow: 'rgba(48, 209, 88, 0.5)',
         },
         danger: {
-          DEFAULT: '#ef4444',
-          hover: '#dc2626',
+          DEFAULT: '#ff453a', // iOS System Red
+          glow: 'rgba(255, 69, 58, 0.5)',
         },
         warning: {
-          DEFAULT: '#f59e0b',
-          hover: '#d97706',
+          DEFAULT: '#ff9f0a', // iOS System Orange
+          glow: 'rgba(255, 159, 10, 0.5)',
         },
 
-        // Latency
-        'latency-excellent': '#10b981',
-        'latency-good': '#fbbf24',
-        'latency-slow': '#f97316',
-        'latency-very-slow': '#ef4444',
-
-        // Text (using custom scale for high contrast)
+        // Text
         text: {
           primary: '#ffffff',
-          secondary: '#a3a3a3',
-          tertiary: '#737373',
-          disabled: '#525252',
+          secondary: '#ebebf599', // Apple label secondary (60%)
+          tertiary: '#ebebf54d',  // Apple label tertiary (30%)
         },
       },
       borderRadius: {

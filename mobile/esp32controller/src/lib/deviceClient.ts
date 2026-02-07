@@ -22,8 +22,9 @@
 /**
  * Successful response from ESP32
  */
-export type DeviceSuccess = {
+export type DeviceSuccess<T = any> = {
   ok: true;
+  data: T;
   rawText: string;
   latencyMs: number;
 };
@@ -42,7 +43,12 @@ export type DeviceError = {
 /**
  * Normalized response type - always has ok field for discriminated union
  */
-export type DeviceResponse = DeviceSuccess | DeviceError;
+export type DeviceResponse<T = any> = DeviceSuccess<T> | DeviceError;
+
+/**
+ * Alias for DeviceResponse (for compatibility with other code)
+ */
+export type DeviceResult<T = any> = DeviceResponse<T>;
 
 /**
  * LED command types
@@ -558,6 +564,15 @@ export function getUserFriendlyError(error: DeviceError): string {
 // Exports
 // ============================================================================
 
+/**
+ * Main device client object for convenient usage
+ */
+export const deviceClient = {
+  getStatus,
+  led,
+  otaUpdate,
+};
+
 // Re-export everything for convenient imports
 export default {
   getStatus,
@@ -570,4 +585,5 @@ export default {
   getUserFriendlyError,
   ErrorMessages,
   mockClient,
+  deviceClient,
 };
