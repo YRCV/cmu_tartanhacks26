@@ -127,6 +127,16 @@ void setupOTA() {
   ArduinoOTA.begin();
 }
 
+// Task for handling web server and OTA updates independently
+void webServerTask(void *pvParameters) {
+  for (;;) {
+    server.handleClient();
+    ArduinoOTA.handle();
+    // Yield to let other tasks run and feed the watchdog
+    vTaskDelay(pdMS_TO_TICKS(1)); 
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -160,10 +170,22 @@ void setup() {
 
   server.begin();
   Serial.println("HTTP server started");
+
+  // Create the web server task running on Core 0
+  // loop() runs on Core 1 by default
+  xTaskCreatePinnedToCore(
+    webServerTask,    // Task function
+    "WebServerTask",  // Task name
+    4096,             // Stack size (bytes)
+    NULL,             // Parameters
+    1,                // Priority
+    NULL,             // Task handle
+    0                 // Core 0
+  );
 }
 
 void loop() {
-  ArduinoOTA.handle();
-  server.handleClient();
+  // Since server.handleClient() is now in a task, ai_test_loop() 
+  // can block here without affecting the web server.
   ai_test_loop();
 }

@@ -64,7 +64,7 @@ async def main():
         print(f"\n[Tool: Generator] Researching and generating for: {spec}...")
         try:
             result = await runner.run(
-                input=f"Generate firmware code for the following specification. Ensure it includes comments and error handling.\nSpec: {spec}",
+                input=f"Generate firmware code for the following specification. Do not forget to include standard libaries like Arduino.h. Ensure it includes comments and error handling.\nSpec: {spec}",
                 model="openai/gpt-5.2",
                 # mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
                 response_format=CodeResponse,
