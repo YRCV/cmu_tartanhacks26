@@ -1,0 +1,74 @@
+# Maestro E2E Test: LED Control Flow
+#
+# Tests the complete flow of controlling an LED through the app.
+# Requires: EXPO_PUBLIC_MOCK_DEVICE=true (mock mode)
+#
+# Run with: maestro test .maestro/led-control-flow.yaml
+
+appId: com.anonymous.esp32controller
+---
+
+# ─── Setup ─────────────────────────────────────────────────
+- launchApp
+- assertVisible: "ESP32 Controller"
+
+# ─── Navigate to Controller Screen ────────────────────────
+- tapOn: "Controller"
+- assertVisible: "ESP32 Device"
+
+# ─── Check Initial State ───────────────────────────────────
+- assertVisible: "Connection"
+- assertVisible:
+    text: "Online|Offline|Unknown"
+    regex: true
+
+# ─── Test LED Toggle ───────────────────────────────────────
+- tapOn: "Toggle"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "LED is (ON|OFF)"
+    regex: true
+
+# ─── Test LED On ───────────────────────────────────────────
+- tapOn: "On"
+- waitForAnimationToEnd
+- assertVisible: "LED is ON"
+
+# ─── Test LED Off ──────────────────────────────────────────
+- tapOn: "Off"
+- waitForAnimationToEnd
+- assertVisible: "LED is OFF"
+
+# ─── Test Response Panel ───────────────────────────────────
+- tapOn: "Response"
+- waitForAnimationToEnd
+- assertVisible:
+    text: '.*"led".*'
+    regex: true
+
+# ─── Navigate to Diagnostics ───────────────────────────────
+- back
+- tapOn: "Diagnostics"
+- assertVisible: "Diagnostics"
+- assertVisible: "Mock Mode Active"
+
+# ─── Test Ping ─────────────────────────────────────────────
+- tapOn: "Ping Device"
+- waitForAnimationToEnd
+- assertVisible: "Last Ping Result"
+- assertVisible:
+    text: "Success|Failed"
+    regex: true
+
+# ─── Test Mock Controls ────────────────────────────────────
+- scrollUntilVisible:
+    element: "Mock Controls"
+    direction: DOWN
+
+- tapOn: "Toggle Offline/Online"
+- assertVisible: "OK"
+- tapOn: "OK"
+
+# ─── Cleanup ───────────────────────────────────────────────
+- back
+- assertVisible: "ESP32 Controller"
