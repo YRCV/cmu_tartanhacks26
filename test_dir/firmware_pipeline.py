@@ -64,9 +64,10 @@ async def main():
         print(f"\n[Tool: Generator] Researching and generating for: {spec}...")
         try:
             result = await runner.run(
-                input=f"Generate firmware code for the following specification. Do not forget to include standard libaries like Arduino.h. DONT USE STATICS OR CONST IN GLOBAL SCOPE. Ensure it includes comments and error handling.\nSpec: {spec}",
+                input=f"Generate firmware code for the following specification. Do not forget to include standard libaries like Arduino.h. DONT USE STATICS OR CONST IN GLOBAL SCOPE OR #DEFINE. Ensure it includes concise comments and error handling.\nSpec: {spec}",
                 model="openai/gpt-5.2",
                 # mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
+                # mcp_servers=["kuax/dedalus_server"],
                 response_format=CodeResponse,
             )
             print(f"[Tool: Generator] Code generated: {result.final_output}...")
@@ -80,17 +81,15 @@ async def main():
         Validates generated code against the original request.
         """
         print(f"\n[Tool: Validator] Checking code against: {original_request}...")
-        # print(code)   
+        # print(code)
         try:
             result = await runner.run(
-                input=f"Validate this firmware code against the request: '{original_request}'.\nCheck logic and security. Check syntax with the cpp_syntax_checker mcp. Return 'PASS' or a report.\nCode:\n{code}",
+                input=f"Validate this firmware code against the request: '{original_request}'.\nCheck logic and security. Check syntax with the check_syntax tooling and verify pin outs work with the esp32-wroom-32 documentation with get_doc tooling. Return 'PASS' or a report.\nCode:\n{code}",
                 model="xai/grok-4-1-fast-reasoning",
                 mcp_servers=["kuax/dedalus_server"],
                 response_format=ValidationResult,
             )
-            print(
-                f"[Tool: Validator] Validation complete: {result.final_output}..."
-            )
+            print(f"[Tool: Validator] Validation complete: {result.final_output}...")
             return result.final_output
         except Exception as e:
             print(f"\n[Tool: Validator] ERROR: {e}")
@@ -117,8 +116,11 @@ async def main():
             # Execution with orchestration using 'instructions'
             response_stream = runner.run(
                 messages=history,
-                instructions="You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. IMPORTANT: The generated code MUST check the global flag `shouldStop` (extern volatile bool shouldStop) periodically in loops and long delays. If `shouldStop` is true, the function must return immediately. Finally, present the code and the validation result to the user. Be descriptive in your feedback to user.",
+                instructions="""You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then RERUN the pipeline!. Pass the original user request to both tools as needed. Finally, present the code and the validation result to the user. Be descriptive in your feedback to user. 
+                
+                IMPORTANT: before starting coding, verfiy that the pin setup is valid via the documentation that you can get with get_doc in mcp server. If it doesn't then inform the user that you're changing the pin location to one that works and get to coding.""",
                 model="openai/gpt-4o-mini",
+                mcp_servers=["kuax/dedalus_server"],
                 tools=[firmware_generator, firmware_validator],
                 stream=True,
                 response_format=UserResponse,
@@ -139,7 +141,7 @@ async def main():
                     .replace("void loop()", "void ai_test_loop()")
                     .replace("void setup()", "void ai_test_setup()")
                 )
-                open("./firmware/src/ai.cpp", "w").write(code )
+                open("./firmware/src/ai.cpp", "w").write(code)
 
             print("\n")
             history.append({"role": "assistant", "content": full_response})
