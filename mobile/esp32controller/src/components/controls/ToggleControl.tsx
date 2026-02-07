@@ -1,6 +1,11 @@
 import React from 'react';
 import { View, Text, Switch, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
+} from 'react-native-reanimated';
 
 interface ToggleControlProps {
     label: string;
@@ -11,37 +16,65 @@ interface ToggleControlProps {
 }
 
 export function ToggleControl({ label, value, onValueChange, disabled, description }: ToggleControlProps) {
+    const scale = useSharedValue(1);
+
     const handleToggle = (newValue: boolean) => {
+        scale.value = withSpring(0.95, { damping: 15 }, () => {
+            scale.value = withSpring(1, { damping: 15 });
+        });
+
         if (Platform.OS === 'ios') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            Haptics.impactAsync(
+                newValue ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light
+            );
         }
         onValueChange(newValue);
     };
 
+    const switchStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }]
+    }));
+
     return (
-        <View className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
-            <View className="flex-row items-center justify-between">
-                <View className="flex-1 mr-4">
-                    <Text className="text-lg font-medium text-neutral-900 dark:text-neutral-50 mb-1">
-                        {label}
+        <View className="flex-row items-center justify-between">
+            {/* Status Indicator */}
+            <View className="flex-row items-center flex-1">
+                <View
+                    className="w-3 h-3 rounded-full mr-3"
+                    style={{
+                        backgroundColor: value ? '#10b981' : '#4b5563',
+                        shadowColor: value ? '#10b981' : '#4b5563',
+                        shadowOffset: { width: 0, height: 0 },
+                        shadowOpacity: value ? 0.6 : 0.3,
+                        shadowRadius: value ? 6 : 3,
+                    }}
+                />
+                <View className="flex-1">
+                    <Text className="text-white text-lg font-semibold tracking-tight">
+                        {value ? 'ON' : 'OFF'}
                     </Text>
                     {description && (
-                        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+                        <Text className="text-white/40 text-[10px] font-mono mt-0.5">
                             {description}
                         </Text>
                     )}
                 </View>
+            </View>
+
+            {/* iOS-style Switch */}
+            <Animated.View style={switchStyle}>
                 <Switch
                     value={value}
                     onValueChange={handleToggle}
                     disabled={disabled}
-                    trackColor={{ false: '#A3A3A3', true: '#22C55E' }}
-                    thumbColor={value ? '#FFFFFF' : '#f4f3f4'}
+                    trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: '#10b981' }}
+                    thumbColor="#ffffff"
+                    ios_backgroundColor="rgba(255, 255, 255, 0.2)"
                     accessibilityLabel={label}
                     accessibilityRole="switch"
                     accessibilityState={{ checked: value, disabled: !!disabled }}
                 />
-            </View>
+            </Animated.View>
         </View>
     );
 }

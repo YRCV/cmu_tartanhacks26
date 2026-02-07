@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import Animated, {
+    FadeIn,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withSequence
+} from 'react-native-reanimated';
 
 interface TextReadoutProps {
     label: string;
@@ -8,14 +15,42 @@ interface TextReadoutProps {
 }
 
 export function TextReadout({ label, value, unit }: TextReadoutProps) {
+    const scale = useSharedValue(1);
+    const opacity = useSharedValue(1);
+
+    // Animate when value changes
+    useEffect(() => {
+        scale.value = withSequence(
+            withSpring(1.1, { damping: 15, stiffness: 200 }),
+            withSpring(1, { damping: 15, stiffness: 200 })
+        );
+        opacity.value = withSequence(
+            withSpring(0.7, { damping: 15 }),
+            withSpring(1, { damping: 15 })
+        );
+    }, [value]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+        opacity: opacity.value
+    }));
+
     return (
-        <View className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm flex-row justify-between items-center">
-            <Text className="text-lg font-medium text-neutral-900 dark:text-neutral-50">
-                {label}
-            </Text>
-            <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-                {value}{unit ? ` ${unit}` : ''}
-            </Text>
-        </View>
+        <Animated.View entering={FadeIn.springify().damping(15)}>
+            {/* Value Display */}
+            <Animated.View style={animatedStyle} className="mb-2">
+                <Text className="text-white text-3xl font-bold tracking-tight">
+                    {value}
+                    {unit && (
+                        <Text className="text-white/50 text-xl font-normal">
+                            {` ${unit}`}
+                        </Text>
+                    )}
+                </Text>
+            </Animated.View>
+
+            {/* Decorative Divider */}
+            <View className="h-px bg-white/10 rounded-full" />
+        </Animated.View>
     );
 }

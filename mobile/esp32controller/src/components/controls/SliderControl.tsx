@@ -2,6 +2,11 @@ import React, { useRef } from 'react';
 import { View, Text, Platform } from 'react-native';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
+} from 'react-native-reanimated';
 
 interface SliderControlProps {
     label: string;
@@ -27,6 +32,7 @@ export function SliderControl({
     description
 }: SliderControlProps) {
     const lastHapticValue = useRef(value);
+    const scale = useSharedValue(1);
 
     const handleValueChange = (newValue: number) => {
         // Trigger haptic feedback every 10% of the range
@@ -41,27 +47,41 @@ export function SliderControl({
         onValueChange(newValue);
     };
 
+    const handleSlidingStart = () => {
+        scale.value = withSpring(1.05, { damping: 15 });
+        if (Platform.OS === 'ios') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+    };
+
+    const handleSlidingComplete = () => {
+        scale.value = withSpring(1, { damping: 15 });
+        if (Platform.OS === 'ios') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+    };
+
+    const valueBoxStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }]
+    }));
+
     const percentage = ((value - min) / (max - min)) * 100;
 
     return (
-        <View className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
-            <View className="flex-row justify-between items-center mb-3">
-                <View className="flex-1">
-                    <Text className="text-lg font-medium text-neutral-900 dark:text-neutral-50 mb-1">
-                        {label}
-                    </Text>
-                    {description && (
-                        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                            {description}
+        <View>
+            {/* Value Display */}
+            <Animated.View style={valueBoxStyle} className="mb-3">
+                <View className="bg-white/10 rounded-2xl px-4 py-3 border border-white/10">
+                    <Text className="text-white text-3xl font-bold tracking-tight text-center">
+                        {value}
+                        <Text className="text-white/50 text-xl font-normal">
+                            {unit ? ` ${unit}` : ''}
                         </Text>
-                    )}
-                </View>
-                <View className="bg-neutral-100 dark:bg-neutral-700 px-3 py-2 rounded-lg ml-3">
-                    <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
-                        {value}{unit ? ` ${unit}` : ''}
                     </Text>
                 </View>
-            </View>
+            </Animated.View>
+
+            {/* iOS-style Slider */}
             <Slider
                 style={{ width: '100%', height: 40 }}
                 minimumValue={min}
@@ -69,10 +89,12 @@ export function SliderControl({
                 step={step}
                 value={value}
                 onValueChange={handleValueChange}
+                onSlidingStart={handleSlidingStart}
+                onSlidingComplete={handleSlidingComplete}
                 disabled={disabled}
-                minimumTrackTintColor="#000000"
-                maximumTrackTintColor="#D4D4D4"
-                thumbTintColor="#000000"
+                minimumTrackTintColor="#ffffff"
+                maximumTrackTintColor="rgba(255, 255, 255, 0.2)"
+                thumbTintColor="#ffffff"
                 accessibilityLabel={label}
                 accessibilityValue={{
                     min,
@@ -81,15 +103,19 @@ export function SliderControl({
                     text: `${value}${unit ? ` ${unit}` : ''}`
                 }}
             />
+
+            {/* Min/Max Labels */}
             <View className="flex-row justify-between items-center mt-1">
-                <Text className="text-xs text-neutral-400 dark:text-neutral-500">
-                    {min}{unit ? ` ${unit}` : ''}
+                <Text className="text-white/40 text-[10px] font-mono">
+                    {min}{unit}
                 </Text>
-                <Text className="text-xs text-neutral-400 dark:text-neutral-500">
-                    {percentage.toFixed(0)}%
-                </Text>
-                <Text className="text-xs text-neutral-400 dark:text-neutral-500">
-                    {max}{unit ? ` ${unit}` : ''}
+                <View className="px-2 py-1 bg-white/5 rounded">
+                    <Text className="text-white/60 text-[9px] font-mono">
+                        {percentage.toFixed(0)}%
+                    </Text>
+                </View>
+                <Text className="text-white/40 text-[10px] font-mono">
+                    {max}{unit}
                 </Text>
             </View>
         </View>

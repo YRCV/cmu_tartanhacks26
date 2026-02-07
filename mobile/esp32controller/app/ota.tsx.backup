@@ -14,14 +14,11 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
-import { ArrowLeft, AlertTriangle, Wifi } from 'lucide-react-native';
 import { otaUpdate } from '@/src/lib/deviceClient';
-import { theme, hairlineWidth } from '@/src/theme/colors';
+import { COLORS, SPACING, RADIUS, FONT_SIZE } from '@/src/lib/version';
 
 export default function OtaScreen() {
   const router = useRouter();
@@ -99,95 +96,64 @@ export default function OtaScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.backButton,
-            { opacity: pressed ? 0.6 : 1 }
-          ]}
-        >
-          <ArrowLeft size={20} color={theme.colors.primary} />
-        </Pressable>
+      <View style={[styles.header, { paddingTop: SPACING.lg + insets.top }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backButton}>← Back</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>OTA Update</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 60 }} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 40 + insets.bottom },
+          { paddingBottom: SPACING.md + insets.bottom },
         ]}
-        showsVerticalScrollIndicator={false}
       >
         {/* Warning Card */}
         <View style={styles.warningCard}>
-          <BlurView
-            intensity={60}
-            tint={theme.blur.thin}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.warningHeader}>
-            <AlertTriangle size={18} color={theme.colors.warning} />
+          <Text style={styles.warningIcon}>⚠️</Text>
+          <View style={styles.warningTextContainer}>
             <Text style={styles.warningTitle}>Important</Text>
+            <Text style={styles.warningText}>
+              • Device will reboot during update{'\n'}
+              • Do not power off device{'\n'}
+              • Update takes 30-60 seconds{'\n'}
+              • Device must be on same network
+            </Text>
           </View>
-          <Text style={styles.warningText}>
-            • Device will reboot during update{'\n'}
-            • Do not power off device{'\n'}
-            • Update takes 30-60 seconds{'\n'}
-            • Device must be on same network
-          </Text>
         </View>
 
         {/* Device IP Input */}
         <View style={styles.section}>
           <Text style={styles.label}>Device IP Address</Text>
-          <View style={styles.inputCard}>
-            <BlurView
-              intensity={40}
-              tint={theme.blur.ultraThin}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.inputWrapper}>
-              <Wifi size={16} color="rgba(255, 255, 255, 0.5)" />
-              <TextInput
-                style={styles.input}
-                value={deviceIp}
-                onChangeText={setDeviceIp}
-                placeholder="192.168.1.100"
-                placeholderTextColor={theme.text.placeholder}
-                keyboardType="numbers-and-punctuation"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isUpdating}
-              />
-            </View>
-          </View>
+          <TextInput
+            style={styles.input}
+            value={deviceIp}
+            onChangeText={setDeviceIp}
+            placeholder="192.168.1.100"
+            keyboardType="numbers-and-punctuation"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isUpdating}
+          />
         </View>
 
         {/* Firmware URL Input */}
         <View style={styles.section}>
           <Text style={styles.label}>Firmware URL</Text>
-          <View style={[styles.inputCard, styles.urlInputCard]}>
-            <BlurView
-              intensity={40}
-              tint={theme.blur.ultraThin}
-              style={StyleSheet.absoluteFill}
-            />
-            <TextInput
-              style={[styles.input, styles.urlInput]}
-              value={firmwareUrl}
-              onChangeText={setFirmwareUrl}
-              placeholder="http://example.com/firmware.bin"
-              placeholderTextColor={theme.text.placeholder}
-              keyboardType="url"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isUpdating}
-              multiline
-            />
-          </View>
+          <TextInput
+            style={[styles.input, styles.urlInput]}
+            value={firmwareUrl}
+            onChangeText={setFirmwareUrl}
+            placeholder="http://example.com/firmware.bin"
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isUpdating}
+            multiline
+          />
           <Text style={styles.hint}>
             Must be a publicly accessible HTTP URL to a .bin file
           </Text>
@@ -197,22 +163,12 @@ export default function OtaScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Example URLs</Text>
           <View style={styles.exampleCard}>
-            <BlurView
-              intensity={60}
-              tint={theme.blur.thin}
-              style={StyleSheet.absoluteFill}
-            />
             <Text style={styles.exampleLabel}>GitHub Release:</Text>
             <Text style={styles.exampleUrl}>
               https://github.com/user/repo/releases/download/v1.0.0/firmware.bin
             </Text>
           </View>
           <View style={styles.exampleCard}>
-            <BlurView
-              intensity={60}
-              tint={theme.blur.thin}
-              style={StyleSheet.absoluteFill}
-            />
             <Text style={styles.exampleLabel}>Direct Server:</Text>
             <Text style={styles.exampleUrl}>
               http://192.168.1.50:8000/firmware.bin
@@ -223,30 +179,16 @@ export default function OtaScreen() {
         {/* Progress Display */}
         {progress && (
           <View style={styles.progressCard}>
-            <BlurView
-              intensity={60}
-              tint={theme.blur.thin}
-              style={StyleSheet.absoluteFill}
-            />
             <Text style={styles.progressText}>{progress}</Text>
           </View>
         )}
 
         {/* Start Button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.updateButton,
-            isUpdating && styles.buttonDisabled,
-            { opacity: pressed && !isUpdating ? 0.8 : 1 }
-          ]}
+        <TouchableOpacity
+          style={[styles.updateButton, isUpdating && styles.buttonDisabled]}
           onPress={handleStartUpdate}
           disabled={isUpdating}
         >
-          <BlurView
-            intensity={80}
-            tint={theme.blur.material}
-            style={StyleSheet.absoluteFill}
-          />
           {isUpdating ? (
             <View style={styles.buttonContent}>
               <ActivityIndicator color="#ffffff" />
@@ -255,15 +197,10 @@ export default function OtaScreen() {
           ) : (
             <Text style={styles.buttonText}>Start OTA Update</Text>
           )}
-        </Pressable>
+        </TouchableOpacity>
 
         {/* Info Section */}
         <View style={styles.infoSection}>
-          <BlurView
-            intensity={60}
-            tint={theme.blur.thin}
-            style={StyleSheet.absoluteFill}
-          />
           <Text style={styles.infoTitle}>How it works</Text>
           <Text style={styles.infoText}>
             1. ESP32 downloads firmware from the URL{'\n'}
@@ -275,11 +212,6 @@ export default function OtaScreen() {
 
         {/* Troubleshooting */}
         <View style={styles.infoSection}>
-          <BlurView
-            intensity={60}
-            tint={theme.blur.thin}
-            style={StyleSheet.absoluteFill}
-          />
           <Text style={styles.infoTitle}>Troubleshooting</Text>
           <Text style={styles.infoText}>
             <Text style={styles.bold}>Timeout:</Text> Device may not have
@@ -300,156 +232,127 @@ export default function OtaScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.layout.padding.screen,
-    paddingBottom: 16,
-    borderBottomWidth: hairlineWidth,
-    borderBottomColor: theme.border.subtle,
+    padding: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontSize: FONT_SIZE.base,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.text.primary,
-    letterSpacing: -0.5,
+    fontSize: FONT_SIZE.xl,
+    fontWeight: '700',
+    color: COLORS.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: theme.layout.padding.screen,
+    padding: SPACING.md,
   },
   warningCard: {
-    borderRadius: theme.layout.borderRadius.lg,
-    borderWidth: hairlineWidth,
-    borderColor: theme.colors.warningDark,
-    padding: 20,
-    marginBottom: 24,
-    overflow: 'hidden',
-  },
-  warningHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    backgroundColor: '#fef3c7',
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.warning,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.lg,
+  },
+  warningIcon: {
+    fontSize: 24,
+    marginRight: SPACING.md,
+  },
+  warningTextContainer: {
+    flex: 1,
   },
   warningTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.warning,
+    fontSize: FONT_SIZE.base,
+    fontWeight: '700',
+    color: '#92400e',
+    marginBottom: SPACING.xs,
   },
   warningText: {
-    fontSize: 13,
-    color: theme.text.secondary,
+    fontSize: FONT_SIZE.sm,
+    color: '#92400e',
     lineHeight: 20,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   label: {
-    fontSize: 13,
+    fontSize: FONT_SIZE.base,
     fontWeight: '600',
-    color: theme.text.primary,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inputCard: {
-    borderRadius: theme.layout.borderRadius.md,
-    borderWidth: hairlineWidth,
-    borderColor: theme.border.default,
-    overflow: 'hidden',
-  },
-  urlInputCard: {
-    minHeight: 80,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
   },
   input: {
-    flex: 1,
-    fontSize: 15,
-    color: theme.text.primary,
-    fontFamily: 'monospace',
-    paddingVertical: 0,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    fontSize: FONT_SIZE.base,
+    backgroundColor: COLORS.surface,
   },
   urlInput: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    minHeight: 60,
     textAlignVertical: 'top',
-    minHeight: 80,
   },
   hint: {
-    fontSize: 12,
-    color: theme.text.tertiary,
-    marginTop: 6,
-    lineHeight: 16,
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text.secondary,
+    marginTop: SPACING.xs,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: FONT_SIZE.base,
     fontWeight: '600',
-    color: theme.text.primary,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
   },
   exampleCard: {
-    borderRadius: theme.layout.borderRadius.md,
-    borderWidth: hairlineWidth,
-    borderColor: theme.border.default,
-    padding: 16,
-    marginBottom: 12,
-    overflow: 'hidden',
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
   },
   exampleLabel: {
-    fontSize: 11,
+    fontSize: FONT_SIZE.xs,
     fontWeight: '600',
-    color: theme.text.tertiary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.xs,
   },
   exampleUrl: {
-    fontSize: 12,
+    fontSize: FONT_SIZE.xs,
     fontFamily: 'monospace',
-    color: theme.colors.primaryLight,
-    lineHeight: 18,
+    color: COLORS.primary,
   },
   progressCard: {
-    borderRadius: theme.layout.borderRadius.md,
-    borderWidth: hairlineWidth,
-    borderColor: theme.colors.success,
-    padding: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
+    backgroundColor: '#ecfdf5',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.success,
   },
   progressText: {
-    fontSize: 13,
-    color: theme.colors.successLight,
-    fontWeight: '500',
+    fontSize: FONT_SIZE.sm,
+    color: '#065f46',
   },
   updateButton: {
-    borderRadius: theme.layout.borderRadius.lg,
-    borderWidth: hairlineWidth,
-    borderColor: theme.colors.warningDark,
-    padding: 18,
+    backgroundColor: COLORS.warning,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
-    marginBottom: 24,
-    overflow: 'hidden',
+    marginBottom: SPACING.lg,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -457,37 +360,32 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: SPACING.sm,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: FONT_SIZE.lg,
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 0.3,
   },
   infoSection: {
-    borderRadius: theme.layout.borderRadius.md,
-    borderWidth: hairlineWidth,
-    borderColor: theme.border.default,
-    padding: 20,
-    marginBottom: 16,
-    overflow: 'hidden',
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
   },
   infoTitle: {
-    fontSize: 13,
+    fontSize: FONT_SIZE.base,
     fontWeight: '600',
-    color: theme.text.primary,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
   },
   infoText: {
-    fontSize: 13,
-    color: theme.text.secondary,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text.secondary,
     lineHeight: 20,
   },
   bold: {
     fontWeight: '600',
-    color: theme.text.primary,
+    color: COLORS.text.primary,
   },
 });

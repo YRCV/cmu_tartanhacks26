@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    interpolateColor
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface GaugeControlProps {
     label: string;
@@ -10,30 +17,66 @@ interface GaugeControlProps {
 }
 
 export function GaugeControl({ label, value, min, max, unit }: GaugeControlProps) {
-    // Simple linear gauge implementation
     const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+    const animatedPercentage = useSharedValue(0);
+
+    useEffect(() => {
+        animatedPercentage.value = withSpring(percentage, {
+            damping: 15,
+            stiffness: 100,
+            mass: 1
+        });
+    }, [percentage]);
+
+    const progressStyle = useAnimatedStyle(() => {
+        const backgroundColor = interpolateColor(
+            animatedPercentage.value,
+            [0, 50, 100],
+            ['#3b82f6', '#10b981', '#f59e0b']
+        );
+
+        return {
+            width: `${animatedPercentage.value}%`,
+            backgroundColor
+        };
+    });
+
+    const getStatusColor = () => {
+        if (percentage < 33) return '#3b82f6';
+        if (percentage < 66) return '#10b981';
+        return '#f59e0b';
+    };
 
     return (
-        <View className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm space-y-3">
-            <View className="flex-row justify-between items-center">
-                <Text className="text-lg font-medium text-neutral-900 dark:text-neutral-50">
-                    {label}
-                </Text>
-                <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-                    {value}{unit ? ` ${unit}` : ''}
+        <View>
+            {/* Value Display */}
+            <View className="mb-3">
+                <Text className="text-white text-4xl font-bold tracking-tighter">
+                    {value}
+                    <Text className="text-white/40 text-2xl font-normal">
+                        {unit ? ` ${unit}` : ''}
+                    </Text>
                 </Text>
             </View>
 
-            <View className="h-4 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                <View
-                    className="h-full bg-black dark:bg-white rounded-full"
-                    style={{ width: `${percentage}%` }}
-                />
+            {/* Progress Track */}
+            <View className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+                <Animated.View
+                    style={[progressStyle]}
+                    className="h-full rounded-full"
+                >
+                    <View className="w-full h-full opacity-80" />
+                </Animated.View>
             </View>
 
+            {/* Min/Max Labels */}
             <View className="flex-row justify-between">
-                <Text className="text-xs text-neutral-400">{min}</Text>
-                <Text className="text-xs text-neutral-400">{max}</Text>
+                <Text className="text-white/40 text-[10px] font-mono">
+                    {min}{unit}
+                </Text>
+                <Text className="text-white/40 text-[10px] font-mono">
+                    {max}{unit}
+                </Text>
             </View>
         </View>
     );
