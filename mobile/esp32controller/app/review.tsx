@@ -16,7 +16,7 @@ export default function ReviewPage() {
     const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const HOLD_DURATION_MS = 3000;
+    const HOLD_DURATION_MS = 1000;
 
     const triggerDeploy = () => {
         setIsDeploying(true);
@@ -329,11 +329,11 @@ const styles = StyleSheet.create({
         color: theme.text.secondary,
     },
     holdButton: {
-        borderRadius: theme.layout.borderRadius.lg,
+        borderRadius: 999,
         borderWidth: hairlineWidth,
         borderColor: 'rgba(99, 102, 241, 0.4)',
         overflow: 'hidden',
-        minHeight: 56,
+        minHeight: 64,
         justifyContent: 'center',
     },
     holdProgress: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         bottom: 0,
-        backgroundColor: 'rgba(99, 102, 241, 0.35)',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
     },
     holdContent: {
         alignItems: 'center',

@@ -56,6 +56,7 @@ export default function ConsolePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [history, setHistory] = useState<HistoryItem[]>(INITIAL_HISTORY);
     const [isVoiceOverlayVisible, setIsVoiceOverlayVisible] = useState(false);
+    const [inputAreaHeight, setInputAreaHeight] = useState(0);
     const scrollViewRef = useRef<FlatList>(null);
 
     // Get dynamic tab bar height and safe area insets
@@ -195,7 +196,10 @@ export default function ConsolePage() {
                 contentContainerStyle={{
                     paddingHorizontal: theme.layout.padding.screen,
                     paddingTop: insets.top,
-                    paddingBottom: 140, // Space for input area
+                    paddingBottom: Math.max(
+                        140,
+                        inputAreaHeight + tabBarHeight + insets.bottom + 12
+                    ), // Space for input area
                 }}
                 style={styles.chatList}
                 ListHeaderComponent={
@@ -227,7 +231,8 @@ export default function ConsolePage() {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-                style={[styles.inputContainer, { bottom: tabBarHeight }]}
+                style={[styles.inputContainer, { bottom: tabBarHeight + insets.bottom }]}
+                onLayout={(event) => setInputAreaHeight(event.nativeEvent.layout.height)}
             >
                 <BlurView
                     intensity={70}

@@ -74,6 +74,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Terminal size={24} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="connect"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
