@@ -1,0 +1,19 @@
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+.clang_complete
+.gcc-flags.json
+
+# ignoring platformio.ini for the wifi credentials
+platformio.ini
+
+*.bin
+*.elf
+*.map
+
+.DS_Store
+.idea/
+*.swp
+*.swo
+*~

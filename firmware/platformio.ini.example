@@ -1,0 +1,15 @@
+; PlatformIO project configuration file example
+; Make a copy of this file and name it platformio.ini
+; Replace with the real WiFi credentials
+
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+libraries = 
+    ESP32 Arduino@^2.0.0
+
+build_flags =
+    -DWIFI_SSID='YOUR_WIFI_SSID_HERE'
+    -DWIFI_PASSWORD='YOUR_WIFI_PASSWORD_HERE'
+ 
