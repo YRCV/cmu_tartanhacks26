@@ -1,3 +1,4 @@
+#include "ai.h"
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -6,7 +7,6 @@
 #include <WebServer.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include "ai.h"
 
 // wifi credentials
 const char *ssid = WIFI_SSID;
@@ -68,7 +68,13 @@ String executeOTAFromURL(String url) {
   return "Success";
 }
 
-// Handle OTA update request (POST /ota/update?url=...)
+// Synchronization flags for OTA vs AI loop
+// --- sync flags ---
+volatile bool isUpdating = false; // "pause ai for update"
+volatile bool aiBusy = false;     // "ai is busy working"
+volatile bool shouldStop = false; // "stop everything now"
+
+// handle ota update request (post /ota/update?url=...)
 void handleOTAUpdate() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
 
@@ -78,11 +84,32 @@ void handleOTAUpdate() {
   }
 
   String url = server.arg("url");
-  server.send(200, "text/plain", "Starting OTA update from " + url + "...");
+  server.send(200, "text/plain", "Starting Ota update from " + url + "...");
 
-  // Give time for response to be sent
+  // 1. tell ai to stop
+  isUpdating = true;
+  shouldStop = true;
+  Serial.println("Waiting for AI loop to stop...");
+
+  // 2. wait for ai to finish current step
+  // wait up to 10s, otherwise force it
+  unsigned long startWait = millis();
+  while (aiBusy && (millis() - startWait < 10000)) {
+    delay(10);
+  }
+
+  // 3. check if stopped
+  if (aiBusy) {
+    Serial.println(
+        "Warning: AI loop did not stop in time. Proceeding anyway...");
+  } else {
+    Serial.println("AI loop stopped. Proceeding with OTA...");
+  }
+
+  // give time for web response
   delay(100);
 
+  // 4. run update
   String result = executeOTAFromURL(url);
 
   if (result == "Success") {
@@ -90,7 +117,30 @@ void handleOTAUpdate() {
     ESP.restart();
   } else {
     Serial.println("OTA Failed: " + result);
+    // resume ai loop if OTA failed
+    isUpdating = false;
+    shouldStop = false;
   }
+}
+
+// ... existing setupOTA/webServerTask/setup ...
+
+void loop() {
+  // Check if OTA is requested relative to core synchronization
+  if (isUpdating) {
+    delay(100);
+    return;
+  }
+
+  // Mark AI as busy
+  aiBusy = true;
+
+  // Since server.handleClient() is now in a task, ai_test_loop()
+  // can block here without affecting the web server.
+  ai_test_loop();
+
+  // Mark AI as not busy
+  aiBusy = false;
 }
 
 void setupOTA() {
@@ -133,7 +183,7 @@ void webServerTask(void *pvParameters) {
     server.handleClient();
     ArduinoOTA.handle();
     // Yield to let other tasks run and feed the watchdog
-    vTaskDelay(pdMS_TO_TICKS(1)); 
+    vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
 
@@ -156,7 +206,7 @@ void setup() {
 
   // Setup OTA
   setupOTA();
-  
+
   // Initialize AI functions
   ai_test_setup();
 
@@ -173,19 +223,12 @@ void setup() {
 
   // Create the web server task running on Core 0
   // loop() runs on Core 1 by default
-  xTaskCreatePinnedToCore(
-    webServerTask,    // Task function
-    "WebServerTask",  // Task name
-    4096,             // Stack size (bytes)
-    NULL,             // Parameters
-    1,                // Priority
-    NULL,             // Task handle
-    0                 // Core 0
+  xTaskCreatePinnedToCore(webServerTask,   // Task function
+                          "WebServerTask", // Task name
+                          4096,            // Stack size (bytes)
+                          NULL,            // Parameters
+                          1,               // Priority
+                          NULL,            // Task handle
+                          0                // Core 0
   );
-}
-
-void loop() {
-  // Since server.handleClient() is now in a task, ai_test_loop() 
-  // can block here without affecting the web server.
-  ai_test_loop();
 }
