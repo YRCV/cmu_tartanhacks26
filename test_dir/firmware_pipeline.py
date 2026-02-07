@@ -51,6 +51,16 @@ async def main():
 
     # Session management
     history = load_history()
+
+    # Load existing firmware context
+    firmware_path = Path(__file__).parent.parent / "firmware" / "src" / "main.cpp"
+    try:
+        current_firmware = firmware_path.read_text()
+        print(f"Loaded existing firmware from {firmware_path}")
+    except Exception as e:
+        print(f"Warning: Could not read firmware file: {e}")
+        current_firmware = "// No existing firmware found."
+
     print("--- Firmware Generation & Validation Pipeline ---")
     print("Type your firmware request (e.g., 'Blink LED on ESP32'). 'exit' to quit.\n")
 
@@ -62,8 +72,17 @@ async def main():
         """
         print(f"\n[Tool: Generator] Researching and generating for: {spec}...")
         try:
+            prompt = f"""
+Generate firmware code for the ESP32.
+CRITICAL: You must preserve the existing OTA and WiFi functionality from the current firmware.
+Do not remove the OTA setup or the WiFi connection logic.
+Modify the code to implement the following specification: {spec}
+
+Current Firmware:
+{current_firmware}
+"""
             result = await runner.run(
-                input=f"Generate firmware code for the following specification. Ensure it includes comments and error handling.\nSpec: {spec}",
+                input=prompt,
                 model="xai/grok-code-fast-1",
                 mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
                 response_format=CodeResponse,
@@ -80,8 +99,16 @@ async def main():
         """
         print(f"\n[Tool: Validator] Checking code against: {original_request}...")
         try:
+            prompt = f"""
+Validate this firmware code against the request: '{original_request}'.
+Check logic and security.
+ensure that the OTA and WiFi functionality from the original firmware is preserved.
+
+Code:
+{code}
+"""
             result = await runner.run(
-                input=f"Validate this firmware code against the request: '{original_request}'.\nCheck logic and security. Return 'PASS' or a report.\nCode:\n{code}",
+                input=prompt,
                 model="xai/grok-4-1-fast-reasoning",
                 response_format=ValidationResult,
             )
