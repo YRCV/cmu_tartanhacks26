@@ -66,7 +66,7 @@ async def main():
             result = await runner.run(
                 input=f"Generate firmware code for the following specification. Ensure it includes comments and error handling.\nSpec: {spec}",
                 model="xai/grok-code-fast-1",
-                mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
+                # mcp_servers=["tsion/exa", "windsor/brave-search-mcp"],
                 response_format=CodeResponse,
             )
             print(f"[Tool: Generator] Code generated: {result.final_output}...")
@@ -80,15 +80,16 @@ async def main():
         Validates generated code against the original request.
         """
         print(f"\n[Tool: Validator] Checking code against: {original_request}...")
+        # print(code)   
         try:
             result = await runner.run(
                 input=f"Validate this firmware code against the request: '{original_request}'.\nCheck logic and security. Check syntax with the cpp_syntax_checker mcp. Return 'PASS' or a report.\nCode:\n{code}",
                 model="xai/grok-4-1-fast-reasoning",
-                mcp_servers=["kuax/cpp_syntax_checker"],
+                mcp_servers=["kuax/dedalus_server"],
                 response_format=ValidationResult,
             )
             print(
-                f"[Tool: Validator] Validation complete: {result.final_output[:50]}..."
+                f"[Tool: Validator] Validation complete: {result.final_output}..."
             )
             return result.final_output
         except Exception as e:
@@ -116,7 +117,7 @@ async def main():
             # Execution with orchestration using 'instructions'
             response_stream = runner.run(
                 messages=history,
-                instructions="You are a firmware coordinator. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. Finally, present the code and the validation result to the user.",
+                instructions="You are a firmware coordinator for esp-wroom-32. For any firmware request, first use firmware_generator to create the code, then use firmware_validator to verify it, if there are any errors then rerun the pipeline. Pass the original user request to both tools as needed. Finally, present the code and the validation result to the user.",
                 model="openai/gpt-4o-mini",
                 tools=[firmware_generator, firmware_validator],
                 stream=True,
@@ -138,7 +139,7 @@ async def main():
                     .replace("void loop()", "void ai_test_loop()")
                     .replace("void setup()", "void ai_test_setup()")
                 )
-                open("ai.cpp", "w").write(code )
+                open("./firmware/src/ai.cpp", "w").write(code )
 
             print("\n")
             history.append({"role": "assistant", "content": full_response})
