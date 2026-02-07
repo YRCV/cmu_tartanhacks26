@@ -24,13 +24,13 @@
   #define LED_BUILTIN 2
 #endif
 
-static const int LED_PIN = LED_BUILTIN;
+int LED_PIN = LED_BUILTIN;
 
 // Base Morse time unit in milliseconds.
-static const uint16_t UNIT_MS = 150;
+uint16_t UNIT_MS = 150;
 
 // Message per spec.
-static const char *MESSAGE = "hello";
+const char *MESSAGE = "hello";
 
 // --- Morse table for A-Z and 0-9 ---
 struct MorseMap {

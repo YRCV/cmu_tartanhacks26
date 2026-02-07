@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include "ai.h"
+#include "ai_vars_gen.h"
 
 // wifi credentials
 const char *ssid = WIFI_SSID;
@@ -137,6 +138,25 @@ void webServerTask(void *pvParameters) {
   }
 }
 
+// Handle variable changes dynamically via query params
+void handleChangeVar() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  String response = "Update status:\n";
+  
+  for (int i = 0; i < server.args(); i++) {
+    String name = server.argName(i);
+    String value = server.arg(i);
+    
+    if (updateVariableGeneric(name, value)) {
+      response += " - " + name + " updated successfully\n";
+    } else {
+      response += " - " + name + " FAILED (not found or type mismatch)\n";
+    }
+  }
+
+  server.send(200, "text/plain", response);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -164,6 +184,7 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/ota/update", HTTP_POST, handleOTAUpdate);
   server.on("/ota/update", HTTP_GET, handleOTAUpdate);
+  server.on("/changeVar", HTTP_GET, handleChangeVar);
 
   // allow cors for all routes
   server.enableCORS(true);

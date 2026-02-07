@@ -42,10 +42,10 @@ def extract_global_variables(file_path):
 
     # Pattern explanation:
     # (?!.*(static|const)) -> Negative lookahead to ensure line doesn't contain static or const
-    # \b(int\b|String\b|char\s*\*|char\b) -> Match type (int, String, char*, or char)
-    # \s*([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\[\s*\d*\s*\])?) -> Match name, including potential array brackets like [] or [32]
+    # \b(int\b|uint16_t\b|uint32_t\b|String\b|char\s*\*|char\b) -> Match type
+    # \s*([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\[\s*\d*\s*\])?) -> Match name
 
-    pattern = r"(?m)^(?!.*(?:static|const))\s*\b(int\b|String\b|char\s*\*|char\b)\s*([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\[\s*\d*\s*\])?)"
+    pattern = r"(?m)^(?!.*(?:static|const))\s*\b(int\b|uint16_t\b|uint32_t\b|String\b|char\s*\*|char\b)\s*([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\[\s*\d*\s*\])?)"
 
     matches = re.findall(pattern, global_scope_content)
 
