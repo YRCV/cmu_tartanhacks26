@@ -51,8 +51,8 @@ export function getVersionInfo(): VersionInfo {
     Platform.OS === 'ios'
       ? Constants.expoConfig?.ios?.buildNumber || '1'
       : Platform.OS === 'android'
-      ? String(Constants.expoConfig?.android?.versionCode || 1)
-      : '1';
+        ? String(Constants.expoConfig?.android?.versionCode || 1)
+        : '1';
 
   // Build date (from Constants or current time if not available)
   const buildDate = Constants.expoConfig?.extra?.buildDate
@@ -214,13 +214,13 @@ export const COLORS = {
   success: '#10b981', // green
   danger: '#ef4444', // red
   warning: '#f59e0b', // orange
-  background: '#f9fafb',
-  surface: '#ffffff',
-  border: '#e5e7eb',
+  background: '#0a0a0a', // dark background
+  surface: '#1a1a1a', // dark surface
+  border: '#2a2a2a', // dark border
   text: {
-    primary: '#111827',
-    secondary: '#6b7280',
-    disabled: '#9ca3af',
+    primary: '#ffffff', // white text
+    secondary: '#a3a3a3', // gray text
+    disabled: '#525252', // darker gray
   },
 } as const;
 

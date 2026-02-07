@@ -15,14 +15,17 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { deviceClient } from '@/src/lib/deviceClient';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import deviceClient from '@/src/lib/deviceClient';
 import { COLORS, SPACING, RADIUS, FONT_SIZE } from '@/src/lib/version';
 
 export default function OtaScreen() {
   const router = useRouter();
+  const { defaultIp } = useLocalSearchParams();
 
-  const [deviceIp, setDeviceIp] = useState('192.168.1.100');
+  const [deviceIp, setDeviceIp] = useState(
+    (defaultIp as string) || '192.168.1.100'
+  );
   const [firmwareUrl, setFirmwareUrl] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [progress, setProgress] = useState('');
