@@ -1,0 +1,4 @@
+.agent/
+.env
+dedalus_labs_context.md
+.venv
