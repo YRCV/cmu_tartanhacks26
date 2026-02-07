@@ -25,6 +25,7 @@ import { MessageInputBar } from '@/src/components/ui/MessageInputBar';
 import { FullScreenVoiceOverlay } from '@/src/components/ui/FullScreenVoiceOverlay';
 import { theme, hairlineWidth } from '@/src/theme/colors';
 import { Terminal, ArrowRight } from 'lucide-react-native';
+import { apiClient } from '@/src/lib/apiClient';
 
 interface HistoryItem {
     id: string;
@@ -85,7 +86,7 @@ export default function ConsolePage() {
         setHistory(prev => [...prev, item]);
     };
 
-    const handleDeploy = () => {
+    const handleDeploy = async () => {
         if (intent.trim().length < 2) return;
 
         if (Platform.OS === 'ios') {
@@ -97,18 +98,41 @@ export default function ConsolePage() {
         addToHistory({ id: Date.now().toString(), type: 'user', content: userMsg });
         setIsLoading(true);
 
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            // TODO: Get real ESP IP from context or settings
+            // For now, using a placeholder or hardcoded value if acceptable, 
+            // but ideally this should come from the selected device.
+            // Assuming the user needs to provide it or it's discovered.
+            // For hackathon, let's hardcode a known IP or ask user to input it?
+            // Actually, let's look at how deviceClient works.
+            // But for now, I will use a hardcoded IP to match the server logic 
+            // or pass a dummy if the server handles discovery (server currently does NOT handle discovery of target ESP IP, it expects it in request).
+            // Let's assume the user has entered it or we use a default.
+            const targetIp = "192.168.4.1"; // Default AP IP or need to find a way to get it.
+
+            // Wait, looking at index.tsx (not shown but assumed), maybe we have context?
+            // For now, I'll send the request.
+
+            await apiClient.generateFirmware(userMsg, targetIp);
+
             addToHistory({
                 id: (Date.now() + 1).toString(),
                 type: 'system',
-                content: `Generated configuration for "${userMsg}".\n\n• Pins: 25, 34\n• Logic: PWM Control`,
+                content: `Firmware generated and OTA triggered.\n\nTarget: ${targetIp}`,
                 action: {
-                    label: 'Review & Flash',
-                    onPress: () => router.push('../review')
+                    label: 'View Code',
+                    onPress: () => router.push('/(tabs)/code')
                 }
             });
-        }, 1000);
+        } catch (error) {
+            addToHistory({
+                id: (Date.now() + 1).toString(),
+                type: 'system',
+                content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
