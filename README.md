@@ -64,7 +64,7 @@ Workflow:
 ## Tech Stack
 
 **Mobile App:** React Native + Expo  
-**AI Backend:** Dedalus Labs (LLM-powered code generation)  
+**Backend:** Dedalus Labs (agents for code generation and validation) & Cloud hosting for compiling code
 **Compilation:** PlatformIO CLI  
 **Hardware:** ESP32 with ArduinoOTA  
 **Communication:** REST API + WiFi OTA updates  
