@@ -1,69 +1,73 @@
-# Dedalus Labs SDK
+# Forge
 
-Intelligent model handoff SDK that automatically routes tasks to the most appropriate LLM based on complexity.
+<img width="490" height="259" alt="esp32" src="https://github.com/user-attachments/assets/61a3bec6-ef10-4fa6-a372-ad33ca7abac2" />
 
-## Features
+AI-powered embedded development from your phone. No laptop required.
 
-- **Intelligent Handoffs**: Automatically route subtasks to specialized models (e.g., GPT-5.2 for reasoning, GPT-5-Codex for code).
-- **Streaming Support**: Real-time response streaming for improved user experience.
-- **Complexity Analysis**: Automatically scores prompts based on length and semantic complexity.
-- **Dynamic Routing**: Routes simple queries to faster/cheaper models and complex queries to more powerful models.
-- **Extensible**: easy to add new model providers (e.g. OpenAI, Anthropic, local models).
+Forge brings hardware programming to everyone by combining natural language AI with over-the-air firmware updates. Describe what you want to build, and Forge generates the code, compiles it, and flashes your ESP32 wirelessly. All from your phone.
 
-## Installation
+## The Problem
 
-```bash
-pip install .
+Most people do not know how to get started with hardware, and many do not have the tools to do so. Traditional embedded development requires:
+- Desktop IDE (Arduino, PlatformIO)
+- USB connection for every code change
+- Manual pin configuration and wiring knowledge
+- Separate tools for compilation, flashing, and control interfaces
+
+## Our Solution
+
+Forge is a mobile-first development platform that lets you:
+1. Describe your project in plain language - "Make an LED blink every 500ms on pin 2"
+2. AI generates hardware-aware code - Knows what's connected and which pins to use
+3. Automatic compilation and OTA updates - Code is compiled in the cloud and flashed wirelessly
+4. Auto-generated control interface - GUI appears based on your components (sliders, buttons, toggles)
+
+## How It Works
+```
+[Mobile App] -> [AI Backend] -> [ESP32 Hardware]
+     |              |               |
+  Voice/Text   Dedalus Labs    OTA Firmware
+  Input        Code Gen         Updates
+               + Compile
 ```
 
-## Usage
+Workflow:
+1. User speaks or types intent: "Add a servo on pin 9 that sweeps back and forth"
+2. Dedalus AI generates Arduino code with full hardware context
+3. Backend compiles firmware using PlatformIO
+4. ESP32 receives OTA update wirelessly
+5. App displays auto-generated controls for the servo
+6. User interacts with hardware immediately
 
-```python
-import asyncio
-from dedalus import AsyncDedalus, OpenAIProvider, DedalusLabsProvider
+## Key Features
 
-async def main():
-    # Initialize with desired models
-    # You can use direct OpenAI providers or Dedalus Labs providers
-    low_cost = OpenAIProvider(model="gpt-4o-mini")
-    high_power = DedalusLabsProvider(model="anthropic/claude-3-5-sonnet")
+### Hardware-Aware AI
 
-    # Create the client
-    client = AsyncDedalus(low_model=low_cost, high_model=high_power)
+### True Mobile Development
+- Write code with natural language
+- No laptop required after initial setup
+- Iterate and debug from your phone
+- Voice or text input
 
-    # Generate response - automatically routes!
-    response = await client.generate("Explain the theory of relativity.")
-    print(response)
+### Instant Updates
+- Over-the-air firmware flashing
+- No USB cable needed
+- See changes immediately
 
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+### Auto-Generated GUI
+- Controls appear based on your components
+- Sliders for servos and motors
+- Toggles for LEDs
+- Indicators for sensors
+- No manual interface building
 
-## Examples
+## Tech Stack
 
-To run the provided examples, you can use the following command from the root directory:
+**Mobile App:** React Native + Expo  
+**AI Backend:** Dedalus Labs (LLM-powered code generation)  
+**Compilation:** PlatformIO CLI  
+**Hardware:** ESP32 with ArduinoOTA  
+**Communication:** REST API + WiFi OTA updates  
+Forge - Where hardware begins.
 
-```bash
-python examples/simple_usage.py
-```
-
-### Firmware Generator (Structured Outputs)
-
-This example demonstrates generating structured JSON output (Pydantic models) from natural language.
-
-1. **Terminal 1 (Start Server):**
-
-    ```bash
-    python examples/firmware_generator_server.py
-    ```
-
-2. **Terminal 2 (Run Client):**
-    ```bash
-    python examples/test_structured_output.py
-    ```
-
-## Structure
-
-- `src/dedalus/complexity.py`: Logic for analyzing prompt complexity.
-- `src/dedalus/router.py`: Logic for selecting models based on scores.
-- `src/dedalus/models.py`: Abstract base class and concrete implementations for LLMs.
+Bringing the fire of development to everyone.
