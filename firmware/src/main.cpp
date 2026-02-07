@@ -1,3 +1,4 @@
+#include "user_app.h" // Include the user application header
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -7,6 +8,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 
+
 // wifi credentials
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PASSWORD;
@@ -14,45 +16,45 @@ const char *password = WIFI_PASSWORD;
 const int LED_PIN = 2; // the built-in led
 
 WebServer server(80);
-bool isBlinking = false;
-unsigned long previousMillis = 0;
-const long interval = 2000; // blink speed, adjust this between tests to verify uploads
 
-// handle led on
+// --- Handlers ---
+// These handlers can control the 'isUserAppActive' flag to enable/disable user
+// logic
+
 void handleLedOn() {
-  isBlinking = true;
+  isUserAppActive = true;
+  // Reset user app state if needed (optional)
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", "LED Blinking Mode ON");
-  Serial.println("LED Blinking ON");
+  server.send(200, "text/plain", "User App Active (Morse/Effects ON)");
+  Serial.println("User App ON");
 }
 
-// handle led off
 void handleLedOff() {
-  isBlinking = false;
+  isUserAppActive = false;
   digitalWrite(LED_PIN, LOW); // Turn off immediately
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", "LED OFF");
-  Serial.println("LED turned OFF");
+  server.send(200, "text/plain", "User App Inactive (LED OFF)");
+  Serial.println("User App OFF");
 }
 
-// handle led toggle
 void handleToggle() {
-  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/plain", digitalRead(LED_PIN) ? "LED ON" : "LED OFF");
-  Serial.println("LED toggled");
+  if (isUserAppActive) {
+    handleLedOff();
+  } else {
+    handleLedOn();
+  }
 }
 
-// handle root (return)
 void handleRoot() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  String message = "ESP32 is running!\n";
-  message += "LED Status: ";
-  message += digitalRead(LED_PIN) ? "ON" : "OFF";
+  String message = "ESP32 Core is running!\n";
+  message += "User App Status: ";
+  message += isUserAppActive ? "ACTIVE" : "INACTIVE";
   server.send(200, "text/plain", message);
 }
 
-// Execute OTA update from a URL
+// --- OTA Logic (Preserved) ---
+
 String executeOTAFromURL(String url) {
   HTTPClient http;
   Serial.println("Starting OTA from URL: " + url);
@@ -99,7 +101,6 @@ String executeOTAFromURL(String url) {
   return "Success";
 }
 
-// Handle OTA update request (POST /ota/update?url=...)
 void handleOTAUpdate() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
 
@@ -110,8 +111,6 @@ void handleOTAUpdate() {
 
   String url = server.arg("url");
   server.send(200, "text/plain", "Starting OTA update from " + url + "...");
-
-  // Give time for response to be sent
   delay(100);
 
   String result = executeOTAFromURL(url);
@@ -126,53 +125,27 @@ void handleOTAUpdate() {
 
 void setupOTA() {
   ArduinoOTA.setHostname("esp32-tartanhacks");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("password");
-
-  // Password can be set with it's md5 value as well
-
-  ArduinoOTA
-      .onStart([]() {
-        String type;
-        if (ArduinoOTA.getCommand() == U_FLASH)
-          type = "sketch";
-        else // U_SPIFFS
-          type = "filesystem";
-
-        // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
-        // using SPIFFS.end()
-        Serial.println("Start updating " + type);
-      })
+  ArduinoOTA.onStart([]() { Serial.println("Start updating"); })
       .onEnd([]() { Serial.println("\nEnd"); })
       .onProgress([](unsigned int progress, unsigned int total) {
         Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
       })
-      .onError([](ota_error_t error) {
-        Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR)
-          Serial.println("Auth Failed");
-        else if (error == OTA_BEGIN_ERROR)
-          Serial.println("Begin Failed");
-        else if (error == OTA_CONNECT_ERROR)
-          Serial.println("Connect Failed");
-        else if (error == OTA_RECEIVE_ERROR)
-          Serial.println("Receive Failed");
-        else if (error == OTA_END_ERROR)
-          Serial.println("End Failed");
-      });
+      .onError([](ota_error_t error) { Serial.printf("Error[%u]: ", error); });
 
   ArduinoOTA.begin();
 }
 
+// --- Main Setup & Loop ---
+
 void setup() {
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
 
-  // connect to wifi
+  // Call user app setup
+  userAppSetup();
+
+  // Connect to WiFi
   Serial.println("Connecting to WiFi...");
-  WiFi.mode(WIFI_STA); // Explicitly set station mode
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -184,23 +157,17 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Setup OTA
   setupOTA();
 
-  // establish the http routes
   server.on("/", handleRoot);
   server.on("/led/on", handleLedOn);
   server.on("/led/off", handleLedOff);
-
   server.on("/led/toggle", handleToggle);
   server.on("/ota/update", HTTP_POST, handleOTAUpdate);
-  server.on("/ota/update", HTTP_GET,
-            handleOTAUpdate); // Allow GET for easier browser testing if needed
-
-  // allow cors for all routes
+  server.on("/ota/update", HTTP_GET, handleOTAUpdate);
   server.enableCORS(true);
-
   server.begin();
+
   Serial.println("HTTP server started");
 }
 
@@ -208,11 +175,6 @@ void loop() {
   ArduinoOTA.handle();
   server.handleClient();
 
-  if (isBlinking) {
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-      previousMillis = currentMillis;
-      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-    }
-  }
+  // Delegate loop logic to user app
+  userAppLoop();
 }

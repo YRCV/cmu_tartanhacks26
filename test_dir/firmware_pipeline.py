@@ -52,11 +52,11 @@ async def main():
     # Session management
     history = load_history()
 
-    # Load existing firmware context
-    firmware_path = Path(__file__).parent.parent / "firmware" / "src" / "main.cpp"
+    # Load existing firmware context - TARGET USER_APP.CPP
+    firmware_path = Path(__file__).parent.parent / "firmware" / "src" / "user_app.cpp"
     try:
         current_firmware = firmware_path.read_text()
-        print(f"Loaded existing firmware from {firmware_path}")
+        print(f"Loaded existing user firmware from {firmware_path}")
     except Exception as e:
         print(f"Warning: Could not read firmware file: {e}")
         current_firmware = "// No existing firmware found."
@@ -73,12 +73,19 @@ async def main():
         print(f"\n[Tool: Generator] Researching and generating for: {spec}...")
         try:
             prompt = f"""
-Generate firmware code for the ESP32.
-CRITICAL: You must preserve the existing OTA and WiFi functionality from the current firmware.
-Do not remove the OTA setup or the WiFi connection logic.
-Modify the code to implement the following specification: {spec}
+Generate STRICTLY COMPLIANT C++ code for 'src/user_app.cpp'.
 
-Current Firmware:
+CRITICAL INSTRUCTIONS (FAILURE TO FOLLOW WILL BREAK THE BUILD):
+1.  **DO NOT** generate `void setup()` or `void loop()`. These functions ALREADY EXIST in `main.cpp`.
+2.  **YOU MUST IMPLEMENT**: `void userAppSetup()` and `void userAppLoop()`.
+3.  **YOU MUST DEFINE**: A global boolean `bool isUserAppActive = false;` (This is required by the linker).
+4.  **Header**: Include `#include "user_app.h"`.
+
+Logic Requirement:
+-   In `userAppLoop()`, check `if (!isUserAppActive) {{ digitalWrite(2, LOW); return; }}` at the start.
+-   Implement the requested logic: {spec}
+
+Current User Firmware (for reference):
 {current_firmware}
 """
             result = await runner.run(
@@ -101,8 +108,11 @@ Current Firmware:
         try:
             prompt = f"""
 Validate this firmware code against the request: '{original_request}'.
-Check logic and security.
-ensure that the OTA and WiFi functionality from the original firmware is preserved.
+Build Safety Checks:
+1.  Does it define `void userAppSetup()`? (Required)
+2.  Does it define `void userAppLoop()`? (Required)
+3.  Does it define `bool isUserAppActive = false;`? (Required)
+4.  Does it **AVOID** defining `void setup()` or `void loop()`? (Critical - defining these will break the build)
 
 Code:
 {code}
@@ -160,6 +170,71 @@ Code:
             print("\n")
             history.append({"role": "assistant", "content": full_response})
             save_history(history)
+
+            # Attempt to save the code to main.cpp
+            try:
+                # Clean up potential markdown formatting if the model wraps json in ```json ... ```
+                cleaned_response = full_response
+                
+                # First, try to find JSON block
+                if "```json" in cleaned_response:
+                    try:
+                       parts = cleaned_response.split("```json")
+                       if len(parts) > 1:
+                           potential_json = parts[1].split("```")[0].strip()
+                           json.loads(potential_json) # Test parse
+                           cleaned_response = potential_json
+                    except:
+                        pass # proceed with raw
+                
+                response_data = {}
+                try:
+                    response_data = json.loads(cleaned_response.strip())
+                except json.JSONDecodeError:
+                    # Fallback: maybe the model just returned the code directly or wrapped it in cpp blocks
+                     print(f"\n[System] Warning: Could not parse response as JSON. Checking for C++ code blocks...")
+                     if "```cpp" in cleaned_response:
+                        code_part = cleaned_response.split("```cpp")[1].split("```")[0].strip()
+                        response_data = {"code": code_part}
+                     elif "```c++" in cleaned_response:
+                        code_part = cleaned_response.split("```c++")[1].split("```")[0].strip()
+                        response_data = {"code": code_part}
+                     else:
+                        # Assumption: The whole response might be code if it looks like C++
+                        if "#include" in cleaned_response or "void userApp" in cleaned_response:
+                            response_data = {"code": cleaned_response}
+                
+                if "code" in response_data and response_data["code"]:
+                    final_code = response_data["code"]
+                    
+                    print(f"\n[System] Post-processing code to ensure compliance...")
+                    # 1. Ensure header include
+                    if '#include "user_app.h"' not in final_code:
+                        final_code = '#include "user_app.h"\n' + final_code
+                    
+                    # 2. Fix setup() -> userAppSetup()
+                    if "void setup()" in final_code:
+                        print("[System] Auto-fixing: renaming setup() to userAppSetup()")
+                        final_code = final_code.replace("void setup()", "void userAppSetup()")
+                    
+                    # 3. Fix loop() -> userAppLoop()
+                    if "void loop()" in final_code:
+                        print("[System] Auto-fixing: renaming loop() to userAppLoop()")
+                        final_code = final_code.replace("void loop()", "void userAppLoop()")
+                        
+                    # 4. Ensure global flag exists
+                    if "bool isUserAppActive" not in final_code:
+                        print("[System] Auto-fixing: injecting isUserAppActive flag")
+                        final_code = final_code.replace('#include "user_app.h"', '#include "user_app.h"\n\n// Auto-injected global flag\nbool isUserAppActive = false;')
+                        
+                    print(f"\n[System] Saving generated code to {firmware_path}...")
+                    firmware_path.write_text(final_code)
+                    print("[System] Save successful!")
+                else:
+                    print("[System] No code found to save.")
+
+            except Exception as e:
+                print(f"\n[System] Error saving file: {e}")
 
         except KeyboardInterrupt:
             break
