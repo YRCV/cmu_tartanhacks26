@@ -53,7 +53,7 @@ async def main():
     # Session management
     history = load_history()
     print("--- Firmware Generation & Validation Pipeline ---")
-    print("Type your firmware request (e.g., 'Blink LED on ESP32'). 'exit' to quit.\n")
+    print("Type your firmware request (e.g., 'Blink LED on ESP 32'). 'exit' to quit.\n")
 
     # Define tools within main to access 'runner'
     async def firmware_generator(spec: str) -> str:

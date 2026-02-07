@@ -10,14 +10,14 @@ extern volatile bool shouldStop;
   #define LED_BUILTIN 2
 #endif
 
-static const int kLedPin = LED_BUILTIN;
+int kLedPin = LED_BUILTIN;
 
 // Blink timing ("3 times fast")
-static const uint32_t kFastOnMs  = 100;
-static const uint32_t kFastOffMs = 100;
+uint32_t kFastOnMs  = 100;
+uint32_t kFastOffMs = 100;
 
 // Hold timing
-static const uint32_t kHoldMs = 5000;
+uint32_t kHoldMs = 5000;
 
 // --- Helpers ---
 
