@@ -1,39 +1,45 @@
+
+import { StyleSheet, Text, View, TextInput, Button, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, Alert, ScrollView } from 'react-native';
 import axios from 'axios';
 
 export default function HomeScreen() {
-  const [espIp, setEspIp] = useState(process.env.EXPO_PUBLIC_ESP_IP || '');
-  const [ledStatus, setLedStatus] = useState('Unknown');
+  const [prompt, setPrompt] = useState('Blink the LED fast');
+  const [espIp, setEspIp] = useState('esp32-tartanhacks.local');
+  const [backendIp, setBackendIp] = useState('10.208.4.179');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
 
-  const sendCommand = async (command: string) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`http://${espIp}/led/${command}`, {
-        timeout: 3000
-      });
-      setLedStatus(response.data);
-      Alert.alert('Success', typeof response.data === 'string' ? response.data : JSON.stringify(response.data));
-    } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', 'Failed to connect to ESP32');
-    } finally {
-      setLoading(false);
+  const handleGenerate = async () => {
+    if (!prompt) {
+      Alert.alert('Error', 'Please enter a prompt');
+      return;
     }
-  };
 
-  const getStatus = async () => {
     setLoading(true);
+    setStatus('Generating & Deploying...');
+
     try {
-      const response = await axios.get(`http://${espIp}/`, {
-        timeout: 3000
-      });
-      setLedStatus(response.data);
-      Alert.alert('Status', typeof response.data === 'string' ? response.data : JSON.stringify(response.data));
-    } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', 'Failed to connect to ESP32');
+      const backendUrl = `http://${backendIp}:8001/generate`;
+      console.log(`Calling backend at: ${backendUrl}`);
+
+      const response = await axios.post(backendUrl, {
+        prompt: prompt,
+        esp_ip: espIp
+      }, { timeout: 300000 }); // Increase timeout to 5 minutes for AI + Compilation
+
+      if (response.data.status === 'success') {
+        setStatus('Success! OTA Triggered.');
+        Alert.alert('Success', 'Firmware generated and OTA triggered!');
+      } else {
+        setStatus('Error: ' + response.data.message);
+        Alert.alert('Error', response.data.message);
+      }
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.response?.data?.detail || error.message;
+      setStatus('Failed: ' + msg);
+      Alert.alert('Error', 'Failed to generate firmware: ' + msg);
     } finally {
       setLoading(false);
     }
@@ -44,44 +50,37 @@ export default function HomeScreen() {
       <Text style={styles.title}>ESP32 Controller</Text>
 
       <View style={styles.section}>
-        <Text>IP Address:</Text>
+        <Text style={styles.label}>Backend IP (PC):</Text>
         <TextInput
           style={styles.input}
+          placeholder="192.168.1.x"
+          value={backendIp}
+          onChangeText={setBackendIp}
+        />
+        <Text style={styles.label}>ESP32 IP/Hostname:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="esp32-tartanhacks.local"
           value={espIp}
           onChangeText={setEspIp}
-          placeholder="192.168.1.150"
-          keyboardType="numeric"
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.status}>Status: {ledStatus}</Text>
+        <Text style={styles.label}>Firmware Prompt:</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="e.g. 'Blink the LED every 100ms'"
+          value={prompt}
+          onChangeText={setPrompt}
+          multiline
+        />
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button
-          title={loading ? "Connecting..." : "Toggle LED"}
-          onPress={() => sendCommand('toggle')}
-          disabled={loading}
-        />
-        <View style={styles.spacer} />
-        <Button
-          title="LED ON"
-          onPress={() => sendCommand('on')}
-          disabled={loading}
-        />
-        <View style={styles.spacer} />
-        <Button
-          title="LED OFF"
-          onPress={() => sendCommand('off')}
-          disabled={loading}
-        />
-        <View style={styles.spacer} />
-        <Button
-          title="Get Status"
-          onPress={getStatus}
-          disabled={loading}
-        />
+        <Button title="Generate & Deploy" onPress={handleGenerate} disabled={loading} />
+        {loading && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 10 }} />}
+        {status ? <Text style={styles.status}>{status}</Text> : null}
       </View>
     </ScrollView>
   );
@@ -91,7 +90,6 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    justifyContent: 'center',
     backgroundColor: '#fff',
   },
   title: {
@@ -103,22 +101,28 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
   },
+  label: {
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
     borderRadius: 5,
-    marginTop: 5,
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
   },
-  status: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
   },
   buttonContainer: {
-    gap: 10,
+    marginTop: 10,
   },
-  spacer: {
-    height: 10,
-  },
+  status: {
+    marginTop: 15,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  }
 });
