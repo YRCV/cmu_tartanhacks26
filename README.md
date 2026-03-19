@@ -1,7 +1,11 @@
 # Forge
 
+<div align="center"> 
 <img width="490" height="259" alt="esp32" src="https://github.com/user-attachments/assets/61a3bec6-ef10-4fa6-a372-ad33ca7abac2" />
 
+
+<div align="left"> 
+     
 AI-powered embedded development from your phone. No laptop required.
 
 Forge brings hardware programming to everyone by combining natural language AI with over-the-air firmware updates. Describe what you want to build, and Forge generates the code, compiles it, and flashes your ESP32 wirelessly. All from your phone.
@@ -70,4 +74,8 @@ Workflow:
 **Communication:** REST API + WiFi OTA updates  
 Forge - Where hardware begins.
 
+<div align="center"> 
+     
 Bringing the fire of development to everyone.
+
+Built by Jossue, Yahil, & Eren.
