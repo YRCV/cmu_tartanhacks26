@@ -1,0 +1,35 @@
+appId: com.esp32controller
+---
+- launchApp
+
+# Wait for app to load
+- assertVisible: "ESP32 Device"
+- assertVisible: "Status"
+
+# Check Initial State
+- assertVisible: "Unknown" # Connection status usually starts unknown or connecting
+
+# Connect / Refresh
+- tapOn: "Status" 
+# Wait for connection (mock mode or timeout)
+- extendedWaitUntil:
+    visible: "Online"
+    timeout: 5000
+
+# Toggle LED
+- tapOn: "Toggle LED"
+- assertVisible: "LED is now ON" # Assuming mock logic
+
+# Turn LED Off
+- tapOn: "Turn Off"
+- assertVisible: "LED is now OFF"
+
+# Turn LED On
+- tapOn: "Turn On"
+- assertVisible: "LED is now ON"
+
+# OTA Navigation
+- tapOn: "OTA Update"
+- assertVisible: "Device IP Address"
+- assertVisible: "Start OTA Update"
+- tapOn: "Back"

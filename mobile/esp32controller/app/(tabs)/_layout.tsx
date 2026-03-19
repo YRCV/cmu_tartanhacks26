@@ -1,33 +1,83 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { View, StyleSheet, Platform } from 'react-native';
+import { LayoutDashboard, Sparkles, Terminal, FileCode } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
+import { theme } from '@/src/theme/colors';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarStyle: {
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          elevation: 0,
+          borderTopWidth: 0,
+          height: Platform.OS === 'ios' ? 85 : 60,
+          backgroundColor: 'transparent',
+          paddingTop: 8,
+        },
+        tabBarBackground: () => (
+          Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={80}
+              tint="systemMaterialDark"
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={{
+              flex: 1,
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              borderTopWidth: 1,
+              borderTopColor: theme.border.default
+            }} />
+          )
+        ),
+        tabBarActiveTintColor: theme.colors.primaryLight,
+        tabBarInactiveTintColor: '#737373',
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 4,
+        },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Monitor',
+          tabBarIcon: ({ color }) => <LayoutDashboard size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="generate"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Console',
+          tabBarIcon: ({ color }) => <Sparkles size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="code"
+        options={{
+          title: 'Code',
+          tabBarIcon: ({ color }) => <FileCode size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="terminal"
+        options={{
+          title: 'Logs',
+          tabBarIcon: ({ color }) => <Terminal size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="connect"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

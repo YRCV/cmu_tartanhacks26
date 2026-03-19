@@ -142,6 +142,22 @@ async def generate_firmware(request: GenerateRequest):
         )
 
 
+
+
+@app.get("/code")
+async def get_code():
+    """
+    Returns the content of the generated firmware file.
+    """
+    try:
+        # Check if the file exists
+        if not FIRMWARE_SRC.exists():
+            return {"code": "// No code generated yet."}
+            
+        return {"code": FIRMWARE_SRC.read_text()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read firmware code: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
 
